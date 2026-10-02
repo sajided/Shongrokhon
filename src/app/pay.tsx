@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { PayForm } from '@/components/PayForm';
+import { StepUpConfirm } from '@/components/StepUpConfirm';
 import { Body, Button, ErrorBanner, Screen, Title } from '@/components/ui';
 import { useSession } from '@/hooks/session';
 import { ApiError, getPaymentStatus, lookupMerchant, makePayment, type MerchantInfo } from '@/lib/api';
@@ -32,6 +33,8 @@ export default function Pay() {
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  // TC-P2-FLOW-03: set when the server asks the user to confirm a medium-risk payment.
+  const [stepUp, setStepUp] = useState<{ amount: number } | null>(null);
 
   const merchantId = parsed.ok ? parsed.qr.merchantId : null;
 
@@ -69,17 +72,22 @@ export default function Pay() {
     );
   }
 
-  const onSubmit = async ({ amount, pin }: { amount: number; pin: string }) => {
+  const onSubmit = async ({ amount, pin }: { amount: number; pin: string }, confirm = false) => {
     setBusy(true);
     setServerError(null);
     try {
+      // Same idempotency key for the step-up confirmation: it completes the same payment.
       const result = await submitPayment(
-        { merchantId: merchant.merchant_id, amount, pin, idempotencyKey },
+        { merchantId: merchant.merchant_id, amount, pin, idempotencyKey, confirm },
         { pay: makePayment, status: getPaymentStatus, waitForOnline, onChecking: () => setChecking(true) },
       );
       if (result.status === 'SUCCESS' && result.transaction_id) {
         refreshProfile();
         router.replace(`/receipt/${result.transaction_id}`);
+        return;
+      }
+      if (result.status === 'STEP_UP_REQUIRED') {
+        setStepUp({ amount });
         return;
       }
       setServerError(messageFor(result.code, { attempts_left: result.attempts_left }));
@@ -102,6 +110,15 @@ export default function Pay() {
           </Body>
           <ActivityIndicator />
         </View>
+      ) : stepUp ? (
+        <StepUpConfirm
+          merchantName={merchant.merchant_name}
+          amount={stepUp.amount}
+          busy={busy}
+          serverError={serverError}
+          onConfirm={(pin) => onSubmit({ amount: stepUp.amount, pin }, true)}
+          onCancel={() => router.back()}
+        />
       ) : (
         <PayForm
           merchantName={merchant.merchant_name}

@@ -2,7 +2,7 @@
 // Runs after auth.spec.ts on the same reset database (U-NORMAL starts at ৳5,000).
 import { expect, test } from '@playwright/test';
 
-import { admin } from '../integration/helpers';
+import { admin, ALWAYS_ALLOW, setRiskConfig, walletOf } from '../integration/helpers';
 import { balanceOf, loginWithSession, PHONES, scanImage } from './helpers';
 
 test.use({ permissions: ['camera'], launchOptions: { args: ['--use-fake-device-for-media-stream'] } });
@@ -23,8 +23,9 @@ test('TC-P1-PAY-01: U-NORMAL pays M-LEGIT ৳500 from an uploaded static QR (QR-
 
   await expect(page.getByText('Payment successful')).toBeVisible();
   await expect(page.getByTestId('receipt-amount')).toHaveText('৳500.00');
-  await expect(page.getByText('Rahim Store')).toBeVisible();
-  await expect(page.getByText('MLEGIT0001')).toBeVisible();
+  // Scoped to the receipt: U-NORMAL's seeded history (Phase 2) also lists Rahim Store.
+  await expect(page.getByTestId('receipt-counterparty')).toHaveText('Rahim Store');
+  await expect(page.getByTestId('receipt-merchant-id')).toHaveText('MLEGIT0001');
 
   await page.getByTestId('share-receipt').click();
   await expect(page.getByTestId('share-note').or(page.getByTestId('receipt'))).toBeVisible();
@@ -92,6 +93,19 @@ test('TC-P1-PAY-04: wrong PIN shows attempts left and does not debit', async ({ 
 });
 
 test('TC-P1-PAY-10: network drops mid-payment -> "checking", then the final result, no duplicate charge', async ({ page, context }) => {
+  // This is U-NORMAL's third payment at the same shop within minutes, which the
+  // anomaly model (correctly) steps up. This test is about network recovery, so
+  // decisions are pinned to ALLOW; step-up has its own tests (risk.spec.ts).
+  const restore = await setRiskConfig(ALWAYS_ALLOW);
+  test.info().attach('risk config', { body: 'ALWAYS_ALLOW' });
+  try {
+    await payWhileOffline(page, context);
+  } finally {
+    await restore();
+  }
+});
+
+async function payWhileOffline(page: import('@playwright/test').Page, context: import('@playwright/test').BrowserContext) {
   await loginWithSession(page, PHONES.normal);
   const before = await balanceOf(PHONES.normal);
   await scanImage(page, 'valid-static-mlegit');
@@ -105,6 +119,13 @@ test('TC-P1-PAY-10: network drops mid-payment -> "checking", then the final resu
 
   await expect(page.getByText('Payment successful')).toBeVisible({ timeout: 30_000 });
   expect(await balanceOf(PHONES.normal)).toBe(before - 100);
-  const { count } = await admin().from('transactions').select('*', { count: 'exact', head: true }).eq('amount', 100).eq('type', 'PAYMENT');
+  const { data: user } = await admin().from('users').select('id').eq('phone', `+88${PHONES.normal}`).single();
+  const { count } = await admin()
+    .from('transactions')
+    .select('*', { count: 'exact', head: true })
+    .eq('payer_wallet_id', (await walletOf(user!.id)).id)
+    .eq('amount', 100)
+    .eq('type', 'PAYMENT')
+    .gte('created_at', new Date(Date.now() - 10 * 60_000).toISOString());
   expect(count).toBe(1);
-});
+}

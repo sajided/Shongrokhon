@@ -4,7 +4,11 @@ import { join } from 'node:path';
 
 const root = join(__dirname, '..', '..');
 
-export default function globalSetup() {
+export default async function globalSetup() {
+  // Phase 2: payments are scored by the ML container (npm run ml:up).
+  const ml = await fetch('http://127.0.0.1:8710/health').catch(() => null);
+  if (!ml?.ok) throw new Error('ML service not reachable on :8710; run `npm run ml:up` first');
+
   // Known state: seeded personas and unused test phone numbers.
   execSync('supabase db reset', { cwd: root, stdio: 'ignore' });
 

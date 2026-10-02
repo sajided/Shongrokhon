@@ -185,7 +185,7 @@ Unit · Integration · E2E · UI · Performance · Security · Model Evaluation 
 | ID | Scenario | Steps / Input | Expected Result | Type | Priority |
 |---|---|---|---|---|---|
 | TC-P2-FLOW-01 | Low risk → execute | `U-NORMAL` pays `M-LEGIT` | Scored below threshold; payment executes; score is saved with the transaction | E2E | P0 |
-| TC-P2-FLOW-02 | High risk → flag/block | `U-ABUSER` pays `M-PSEUDO` a round ৳10,000 | Payment held or blocked per policy; alert created; ledger unchanged; user sees a neutral message | E2E | P0 |
+| TC-P2-FLOW-02 | High risk → flag | `U-ABUSER` pays `M-PSEUDO` a round ৳10,000 | Per the Phase 2 policy (pay, then alert and flag): the payment executes; a risk alert is created; payer and merchant wallets are flagged; payer and merchant each receive an in-app notice | E2E | P0 |
 | TC-P2-FLOW-03 | Medium risk → step-up | Score between the review and block thresholds | Extra verification (e.g., PIN re-entry / confirmation) required; executes only after it | E2E | P1 |
 | TC-P2-FLOW-04 | Scoring service down | Stop the ML service → attempt payment | Fallback policy applies (rule-based limits); clearly logged; no unhandled error to the user | Integration | P0 |
 | TC-P2-FLOW-05 | Scoring timeout | ML service delays 3 s | Request times out at the configured limit; fallback policy applies | Integration | P0 |

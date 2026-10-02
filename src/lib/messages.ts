@@ -35,6 +35,12 @@ const messages: Record<string, string> = {
   WALLET_NOT_FOUND: 'Wallet not found.',
   IDEMPOTENCY_KEY_REUSED: 'This payment request was already used. Start again.',
   INVALID_REQUEST: 'Something went wrong. Start again.',
+  // Risk checks (Phase 2). Neutral on purpose: never say why a payment was checked.
+  CONFIRM_PAYMENT: 'Please confirm this payment with your PIN.',
+  SCORE_REQUIRED: 'We could not check this payment. Try again.',
+  SCORE_INVALID: 'We could not check this payment. Try again.',
+  SCORE_EXPIRED: 'This payment took too long to confirm. Try again.',
+  INVALID_SCORE: 'We could not check this payment. Try again.',
   // Generic
   NETWORK: 'No connection. Check your internet and try again.',
   SESSION_EXPIRED: 'Your session has ended. Please sign in again.',

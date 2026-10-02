@@ -50,3 +50,10 @@ fixtures/qr/*.y4m
 playwright-report/
 test-results/
 fixtures/qr/index.json
+
+# Edge Function / ML secrets
+supabase/functions/.env
+# ML local cache
+ml/.cache/
+__pycache__/
+.pytest_cache/

@@ -18,6 +18,7 @@ describe('TC-P1-PAY-13: receipt text', () => {
       id: 'txn-123',
       type: 'PAYMENT',
       status: 'SUCCESS',
+      flagged: false,
       direction: 'OUT',
       amount: 500,
       counterparty_name: 'Rahim Store',

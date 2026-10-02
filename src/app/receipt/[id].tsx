@@ -37,11 +37,11 @@ export default function Receipt() {
     );
   }
 
-  const rows: [string, string][] = [
-    ['Transaction ID', txn.id],
-    [txn.direction === 'OUT' ? 'Paid to' : 'Received from', txn.counterparty_name ?? '—'],
-    ['Merchant ID', txn.counterparty_ref ?? '—'],
-    ['Date & time', formatDateTime(txn.created_at)],
+  const rows: [string, string, string][] = [
+    ['Transaction ID', txn.id, 'receipt-id'],
+    [txn.direction === 'OUT' ? 'Paid to' : 'Received from', txn.counterparty_name ?? '—', 'receipt-counterparty'],
+    ['Merchant ID', txn.counterparty_ref ?? '—', 'receipt-merchant-id'],
+    ['Date & time', formatDateTime(txn.created_at), 'receipt-date'],
   ];
 
   return (
@@ -54,10 +54,18 @@ export default function Receipt() {
           {formatTaka(Number(txn.amount))}
         </Text>
       </View>
-      {rows.map(([label, value]) => (
+      {txn.flagged && (
+        // TC-P2-FLOW-02: the payment went through and is being reviewed.
+        <View style={styles.flag} testID="receipt-flag-notice" accessibilityRole="alert">
+          <Text style={styles.flagText}>
+            This payment has been flagged for a routine review. You don&apos;t need to do anything.
+          </Text>
+        </View>
+      )}
+      {rows.map(([label, value, testID]) => (
         <View key={label} style={styles.row}>
           <Text style={styles.label}>{label}</Text>
-          <Text style={styles.value} selectable>
+          <Text style={styles.value} selectable testID={testID}>
             {value}
           </Text>
         </View>
@@ -84,4 +92,6 @@ const styles = StyleSheet.create({
   row: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, paddingVertical: 10, gap: 2 },
   label: { color: colors.muted, fontSize: 13 },
   value: { color: colors.text, fontSize: 16 },
+  flag: { backgroundColor: colors.warningSurface, borderRadius: 12, padding: 12 },
+  flagText: { color: colors.warning, fontSize: 14, lineHeight: 20 },
 });

@@ -16,6 +16,19 @@ function deps(overrides: Partial<Parameters<typeof submitPayment>[1]> = {}) {
 }
 
 describe('submitPayment', () => {
+  it('TC-P2-FLOW-03: returns a step-up request untouched for the screen to handle', async () => {
+    const stepUp: PaymentResponse = { status: 'STEP_UP_REQUIRED', code: 'CONFIRM_PAYMENT' };
+    const d = deps({ pay: jest.fn().mockResolvedValue(stepUp) });
+    await expect(submitPayment(req, d)).resolves.toEqual(stepUp);
+    expect(d.pay).toHaveBeenCalledTimes(1);
+  });
+
+  it('TC-P2-FLOW-03: the confirmation reuses the idempotency key and sets confirm', async () => {
+    const pay = jest.fn<Promise<PaymentResponse>, [PaymentRequest]>().mockResolvedValue(success);
+    await submitPayment({ ...req, confirm: true }, deps({ pay }));
+    expect(pay.mock.calls[0][0]).toMatchObject({ idempotencyKey: 'key-1', confirm: true });
+  });
+
   it('returns the server result directly when the network is fine', async () => {
     const d = deps();
     await expect(submitPayment(req, d)).resolves.toEqual(success);

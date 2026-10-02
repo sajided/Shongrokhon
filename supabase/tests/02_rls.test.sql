@@ -9,7 +9,7 @@ select pg_temp.mk_merchant('8801700000203', 'MRLS0001', 'RLS Shop') as m \gset
 
 -- Give B some history.
 select pg_temp.as_user(:'b') \gset
-select public.make_payment('MRLS0001', 100, '12345', gen_random_uuid()) as b_pay \gset
+select pg_temp.pay('MRLS0001', 100, '12345', gen_random_uuid()) as b_pay \gset
 reset role;
 select is((:'b_pay'::jsonb) ->> 'status', 'SUCCESS', 'setup: B paid the merchant');
 

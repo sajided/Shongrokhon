@@ -1,0 +1,38 @@
+# ML scoring service + hourly network-risk job (Phase 2).
+# Joins the local Supabase network so the `pay` Edge Function reaches it at
+# http://shongrokhon-ml:8000. Start Supabase first (the network must exist).
+#   npm run ml:up / ml:down
+# Secrets: supabase/functions/.env (gitignored; copy .env.example).
+name: shongrokhon-ml
+
+x-ml: &ml
+  build: .
+  image: shongrokhon-ml
+  env_file: ../supabase/functions/.env
+  networks:
+    supabase:
+      aliases: [shongrokhon-ml]
+
+services:
+  ml:
+    <<: *ml
+    container_name: shongrokhon-ml
+    ports: ["127.0.0.1:8710:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  network-job:
+    <<: *ml
+    command: ["python", "-m", "shongrokhon_ml.network", "--interval", "3600"]
+    environment:
+      ML_DB_URL: postgresql://postgres:postgres@supabase_db_shongrokhon:5432/postgres
+    restart: unless-stopped
+
+networks:
+  supabase:
+    external: true
+    name: supabase_network_shongrokhon

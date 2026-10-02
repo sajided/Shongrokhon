@@ -58,3 +58,40 @@ begin
   perform set_config('request.jwt.claims', '{"role":"anon"}', true);
   perform set_config('role', 'anon', true);
 end $$;
+
+-- Phase 2: make_payment needs a matching server-side score (TC-P2-FLOW-07).
+-- Inserts one, as the service would, with the given decision and returns its id.
+-- Call it as postgres (before as_user), or let pg_temp.pay call it.
+create or replace function pg_temp.mk_score(
+  p_user uuid, p_merchant_id text, p_amount numeric, p_key uuid,
+  p_decision public.risk_decision default 'ALLOW', p_ttl interval default interval '5 minutes'
+) returns uuid language plpgsql security definer as $$
+declare
+  v_id uuid;
+begin
+  insert into public.risk_scores (user_id, payer_wallet_id, payee_wallet_id, amount, idempotency_key, features,
+                                  risk_score, anomaly_score, decision, source, model_version, expires_at)
+  select p_user, payer.id, payee.id, p_amount, p_key, '{}'::jsonb, 0.01, -0.1, p_decision, 'MODEL', 'test', now() + p_ttl
+    from public.wallets payer, public.wallets payee
+   where payer.user_id = p_user and payer.kind = 'customer'
+     and payee.kind = 'merchant' and payee.merchant_id = p_merchant_id
+  on conflict (payer_wallet_id, idempotency_key) do update set decision = excluded.decision
+  returning id into v_id;
+  return v_id;
+end $$;
+
+-- The Phase 1 call shape plus a score, for the signed-in user (as_user).
+-- SECURITY DEFINER so the score insert works under the authenticated role;
+-- make_payment still reads the caller from request.jwt.claims.
+create or replace function pg_temp.pay(
+  p_merchant_id text, p_amount numeric, p_pin text, p_key uuid, p_note text default null,
+  p_decision public.risk_decision default 'ALLOW', p_confirm boolean default false
+) returns jsonb language plpgsql security definer as $$
+declare
+  v_score uuid;
+begin
+  if p_amount > 0 then
+    v_score := pg_temp.mk_score(auth.uid(), p_merchant_id, p_amount, p_key, p_decision);
+  end if;
+  return public.make_payment(p_merchant_id, p_amount, p_pin, p_key, p_note, v_score, p_confirm);
+end $$;

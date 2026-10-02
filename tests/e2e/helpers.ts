@@ -9,6 +9,9 @@ export const PHONES = {
   normal: '01711000001', // U-NORMAL ৳5,000
   low: '01711000002', // U-LOW ৳100
   fresh: '01711000003', // unregistered
+  abuser: '01911000001', // U-ABUSER ৳20,000
+  newUser: '01911000002', // U-NEW ৳0, no history
+  ringMember: '01911000010', // RING-01-8 ৳5,000
 } as const;
 
 /** Signs in through the real sign-in screen (OTP 123456). */

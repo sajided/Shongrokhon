@@ -37,6 +37,14 @@ if status="$(supabase status -o env 2>/dev/null)"; then
   done
 fi
 
+# Phase 2: the ML service token and internal URL are server-side only.
+check "ML service variable name" 'ML_SERVICE_TOKEN'
+if [ -f supabase/functions/.env ]; then
+  token="$(sed -n 's/^ML_SERVICE_TOKEN=//p' supabase/functions/.env)"
+  [ -n "$token" ] && check "ML_SERVICE_TOKEN value" "$(printf '%s' "$token" | sed 's/[.[\*^$()+?{|]/\\&/g')"
+fi
+check "internal ML URL" 'shongrokhon-ml:8000'
+
 # Any JWT in the bundle must carry role=anon.
 while IFS= read -r jwt; do
   payload="$(printf '%s' "$jwt" | cut -d. -f2 | tr '_-' '/+')"

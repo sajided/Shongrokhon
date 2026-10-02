@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { readConfig } from './config';
 import { ApiError, NetworkError, SessionExpiredError } from './errors';
 import { getSupabase } from './supabase';
 
@@ -30,6 +31,71 @@ export async function callRpc<T>(fn: string, args: Record<string, unknown> = {},
   }
 }
 
+export interface FunctionTransport {
+  url: string;
+  anonKey: string;
+  accessToken: () => Promise<string | null>;
+  onUnauthorized: () => Promise<void>;
+  fetchImpl?: typeof fetch;
+  timeoutMs?: number;
+}
+
+/**
+ * POSTs to a Supabase Edge Function with the same error mapping as callRpc:
+ * 401 -> local sign-out + SessionExpiredError, transport failure or timeout ->
+ * NetworkError, an UPPER_SNAKE `code` in an error body -> ApiError(code).
+ */
+export async function invokeFunction<T>(name: string, body: unknown, t: FunctionTransport): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), t.timeoutMs ?? REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    const token = await t.accessToken();
+    res = await (t.fetchImpl ?? fetch)(`${t.url}/functions/v1/${name}`, {
+      method: 'POST',
+      headers: {
+        apikey: t.anonKey,
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch {
+    throw new NetworkError();
+  } finally {
+    clearTimeout(timer);
+  }
+  if (res.status === 401) {
+    await t.onUnauthorized();
+    throw new SessionExpiredError();
+  }
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    throw new ApiError('INTERNAL_ERROR');
+  }
+  if (!res.ok) {
+    const code = (data as { code?: unknown })?.code;
+    throw new ApiError(typeof code === 'string' && /^[A-Z_]+$/.test(code) ? code : 'INTERNAL_ERROR');
+  }
+  return data as T;
+}
+
+export function callFunction<T>(name: string, body: unknown): Promise<T> {
+  const { supabaseUrl, supabaseAnonKey } = readConfig();
+  const supabase = getSupabase();
+  return invokeFunction<T>(name, body, {
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
+    accessToken: async () => (await supabase.auth.getSession()).data.session?.access_token ?? null,
+    onUnauthorized: async () => {
+      await supabase.auth.signOut({ scope: 'local' });
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Typed RPC wrappers
 // ---------------------------------------------------------------------------
@@ -47,7 +113,8 @@ export interface Profile {
 }
 
 export interface PaymentResponse {
-  status: 'SUCCESS' | 'FAILED' | 'PENDING' | 'NOT_FOUND';
+  /** STEP_UP_REQUIRED: medium risk; resubmit with `confirm: true` after the user re-enters their PIN (TC-P2-FLOW-03). */
+  status: 'SUCCESS' | 'FAILED' | 'PENDING' | 'NOT_FOUND' | 'STEP_UP_REQUIRED';
   code?: string | null;
   transaction_id?: string;
   amount?: number;
@@ -58,6 +125,9 @@ export interface PaymentResponse {
   replayed?: boolean;
   attempts_left?: number;
   locked_until?: string;
+  risk_decision?: 'ALLOW' | 'REVIEW' | 'FLAG' | null;
+  /** The payment went through but was flagged for review (TC-P2-FLOW-02). */
+  flagged?: boolean;
 }
 
 export interface PaymentRequest {
@@ -66,11 +136,13 @@ export interface PaymentRequest {
   pin: string;
   idempotencyKey: string;
   note?: string;
+  /** Step-up confirmation of a REVIEW decision. */
+  confirm?: boolean;
 }
 
 export interface TransactionRow {
   id: string;
-  type: 'PAYMENT' | 'TOPUP';
+  type: 'PAYMENT' | 'TOPUP' | 'CASHOUT';
   status: 'PENDING' | 'SUCCESS' | 'FAILED';
   direction: 'IN' | 'OUT';
   amount: number;
@@ -78,6 +150,7 @@ export interface TransactionRow {
   counterparty_ref: string | null;
   note: string | null;
   created_at: string;
+  flagged: boolean;
 }
 
 export interface MerchantInfo {
@@ -95,13 +168,16 @@ export async function lookupMerchant(merchantId: string): Promise<MerchantInfo |
   return rows[0] ?? null;
 }
 
+// Scan -> score -> execute: the `pay` Edge Function scores the payment before
+// make_payment runs (TC-P2-FLOW-*). make_payment rejects calls without a score.
 export const makePayment = (req: PaymentRequest) =>
-  callRpc<PaymentResponse>('make_payment', {
-    p_merchant_id: req.merchantId,
-    p_amount: req.amount,
-    p_pin: req.pin,
-    p_idempotency_key: req.idempotencyKey,
-    p_note: req.note ?? null,
+  callFunction<PaymentResponse>('pay', {
+    merchantId: req.merchantId,
+    amount: req.amount,
+    pin: req.pin,
+    idempotencyKey: req.idempotencyKey,
+    note: req.note ?? null,
+    confirm: req.confirm ?? false,
   });
 
 export const getPaymentStatus = (idempotencyKey: string) =>
@@ -113,3 +189,17 @@ export const getTransactions = (opts: { limit?: number; before?: string; id?: st
     p_before: opts.before ?? null,
     p_id: opts.id ?? null,
   });
+
+export interface Notice {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown>;
+  created_at: string;
+  read_at: string | null;
+}
+
+export const getNotifications = (limit = 20) => callRpc<Notice[]>('get_my_notifications', { p_limit: limit });
+
+export const markNotificationRead = (id: string) => callRpc<void>('mark_notification_read', { p_id: id });

@@ -3,7 +3,8 @@
 module.exports = {
   preset: 'jest-expo',
   testTimeout: 15000,
-  testMatch: ['<rootDir>/src/**/*.test.ts?(x)'],
+  // supabase/functions: pure helpers of Edge Functions (no Deno APIs), e.g. pay/score.ts.
+  testMatch: ['<rootDir>/src/**/*.test.ts?(x)', '<rootDir>/supabase/functions/**/*.test.ts'],
   moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
   collectCoverageFrom: ['src/lib/**/*.ts', 'src/components/**/*.tsx', '!src/lib/supabase.ts'],
 };

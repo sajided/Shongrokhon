@@ -12,7 +12,7 @@ select '6f1c1a52-0000-4000-8000-000000000001' as key1 \gset
 -- TC-P1-PAY-01: standard low-risk payment
 --------------------------------------------------------------------------------
 select pg_temp.as_user(:'u') \gset
-select public.make_payment('MTEST0001', 500, '12345', :'key1', 'secret note') as r1 \gset
+select pg_temp.pay('MTEST0001', 500, '12345', :'key1', 'secret note') as r1 \gset
 reset role;
 select is((:'r1'::jsonb) ->> 'status', 'SUCCESS', 'PAY-01: status SUCCESS');
 select is(((:'r1'::jsonb) ->> 'balance_after')::numeric, 4500.00, 'PAY-01: result reports balance ৳4,500');
@@ -38,8 +38,8 @@ select is(
 -- TC-P1-PAY-07: idempotency
 --------------------------------------------------------------------------------
 select pg_temp.as_user(:'u') \gset
-select public.make_payment('MTEST0001', 500, '12345', :'key1') as r1b \gset
-select public.make_payment('MTEST0001', 700, '12345', :'key1') as r1c \gset
+select pg_temp.pay('MTEST0001', 500, '12345', :'key1') as r1b \gset
+select pg_temp.pay('MTEST0001', 700, '12345', :'key1') as r1c \gset
 select public.get_payment_status(:'key1') as s1 \gset
 select public.get_payment_status(gen_random_uuid()) as s2 \gset
 reset role;
@@ -54,7 +54,7 @@ select is((:'s2'::jsonb) ->> 'status', 'NOT_FOUND', 'PAY-10: unknown key reports
 -- TC-P1-PAY-03: insufficient balance
 --------------------------------------------------------------------------------
 select pg_temp.as_user(:'low') \gset
-select public.make_payment('MTEST0001', 500, '12345', gen_random_uuid()) as r3 \gset
+select pg_temp.pay('MTEST0001', 500, '12345', gen_random_uuid()) as r3 \gset
 reset role;
 select is((:'r3'::jsonb) ->> 'code', 'INSUFFICIENT_FUNDS', 'PAY-03: rejected for insufficient funds');
 select is(pg_temp.balance_of(:'low'), 100.00::numeric, 'PAY-03: balance unchanged');
@@ -65,7 +65,7 @@ select is((select count(*) from public.transactions where payer_wallet_id = pg_t
 -- TC-P1-PAY-04 / PAY-05: wrong PIN and lockout
 --------------------------------------------------------------------------------
 select pg_temp.as_user(:'u') \gset
-select public.make_payment('MTEST0001', 10, '00000', gen_random_uuid()) as p1 \gset
+select pg_temp.pay('MTEST0001', 10, '00000', gen_random_uuid()) as p1 \gset
 reset role;
 select is((:'p1'::jsonb) ->> 'code', 'WRONG_PIN', 'PAY-04: wrong PIN rejected');
 select is(((:'p1'::jsonb) ->> 'attempts_left')::int, 2, 'PAY-04: attempts_left reported');
@@ -73,9 +73,9 @@ select is((select pin_failed_attempts from public.users where id = :'u'), 1, 'PA
 select is(pg_temp.balance_of(:'u'), 4500.00::numeric, 'PAY-04: no ledger change');
 
 select pg_temp.as_user(:'u') \gset
-select public.make_payment('MTEST0001', 10, '00000', gen_random_uuid()) as p2 \gset
-select public.make_payment('MTEST0001', 10, '00000', gen_random_uuid()) as p3 \gset
-select public.make_payment('MTEST0001', 10, '12345', gen_random_uuid()) as p4 \gset
+select pg_temp.pay('MTEST0001', 10, '00000', gen_random_uuid()) as p2 \gset
+select pg_temp.pay('MTEST0001', 10, '00000', gen_random_uuid()) as p3 \gset
+select pg_temp.pay('MTEST0001', 10, '12345', gen_random_uuid()) as p4 \gset
 reset role;
 select is((:'p3'::jsonb) ->> 'code', 'PIN_LOCKED', 'PAY-05: third wrong PIN locks payments');
 select isnt((select pin_locked_until from public.users where id = :'u'), null, 'PAY-05: lock expiry stored');
@@ -84,7 +84,7 @@ select is(pg_temp.balance_of(:'u'), 4500.00::numeric, 'PAY-05: no ledger change 
 
 update public.users set pin_locked_until = now() - interval '1 minute' where id = :'u';
 select pg_temp.as_user(:'u') \gset
-select public.make_payment('MTEST0001', 10, '12345', gen_random_uuid()) as p5 \gset
+select pg_temp.pay('MTEST0001', 10, '12345', gen_random_uuid()) as p5 \gset
 reset role;
 select is((:'p5'::jsonb) ->> 'status', 'SUCCESS', 'PAY-05: payments resume after the lock period');
 select is((select pin_failed_attempts from public.users where id = :'u'), 0, 'PAY-05: counter reset after success');
@@ -93,10 +93,10 @@ select is((select pin_failed_attempts from public.users where id = :'u'), 0, 'PA
 -- TC-P1-PAY-06: amount validation
 --------------------------------------------------------------------------------
 select pg_temp.as_user(:'u') \gset
-select public.make_payment('MTEST0001', 0, '12345', gen_random_uuid()) as a0 \gset
-select public.make_payment('MTEST0001', -5, '12345', gen_random_uuid()) as a1 \gset
-select public.make_payment('MTEST0001', 10.123, '12345', gen_random_uuid()) as a2 \gset
-select public.make_payment('MTEST0001', 25000.01, '12345', gen_random_uuid()) as a3 \gset
+select pg_temp.pay('MTEST0001', 0, '12345', gen_random_uuid()) as a0 \gset
+select pg_temp.pay('MTEST0001', -5, '12345', gen_random_uuid()) as a1 \gset
+select pg_temp.pay('MTEST0001', 10.123, '12345', gen_random_uuid()) as a2 \gset
+select pg_temp.pay('MTEST0001', 25000.01, '12345', gen_random_uuid()) as a3 \gset
 reset role;
 select is((:'a0'::jsonb) ->> 'code', 'INVALID_AMOUNT', 'PAY-06: zero rejected');
 select is((:'a1'::jsonb) ->> 'code', 'INVALID_AMOUNT', 'PAY-06: negative rejected');
@@ -108,8 +108,8 @@ select is((:'a3'::jsonb) ->> 'code', 'AMOUNT_ABOVE_LIMIT', 'PAY-06: above per-tr
 --------------------------------------------------------------------------------
 select public.admin_credit_wallet(pg_temp.wallet_of(:'m'), 100) \gset
 select pg_temp.as_user(:'m') \gset
-select public.make_payment('MTEST0001', 10, '12345', gen_random_uuid()) as self \gset
-select public.make_payment('NOPE9999', 10, '12345', gen_random_uuid()) as nomerchant \gset
+select pg_temp.pay('MTEST0001', 10, '12345', gen_random_uuid()) as self \gset
+select pg_temp.pay('NOPE9999', 10, '12345', gen_random_uuid()) as nomerchant \gset
 reset role;
 select is((:'self'::jsonb) ->> 'code', 'SELF_PAYMENT', 'PAY-11: paying your own merchant QR is blocked');
 select is((:'nomerchant'::jsonb) ->> 'code', 'MERCHANT_NOT_FOUND', 'Unknown merchant is rejected');
@@ -126,7 +126,7 @@ create trigger zz_fail_credit before insert on public.ledger_entries
   for each row execute function pg_temp.fail_credit();
 
 select pg_temp.as_user(:'u') \gset
-select throws_ok($$select public.make_payment('MTEST0001', 100, '12345', '6f1c1a52-0000-4000-8000-000000000008')$$,
+select throws_ok($$select pg_temp.pay('MTEST0001', 100, '12345', '6f1c1a52-0000-4000-8000-000000000008')$$,
   'P0001', 'injected failure', 'PAY-08: injected DB error surfaces');
 reset role;
 drop trigger zz_fail_credit on public.ledger_entries;

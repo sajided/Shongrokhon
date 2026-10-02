@@ -90,6 +90,8 @@ Covers every `TC-P1-*` case in `testcase.md` §1.1–1.5. **Scope change:** the 
 | PAY-13 | P2 | `unit` format.test.ts, `e2e/pay` | ✅ | Shares with the Web Share API where available, otherwise copies to the clipboard. |
 
 ## Automated run summary
+> Phase 2 changed how payments run (scored through the `pay` Edge Function). The latest Phase 1 regression results, with scoring in the flow, are in `docs/phase2-test-matrix.md`.
+
 | Suite | Result |
 |---|---|
 | pgTAP (`supabase test db`) | 98 / 98 pass |

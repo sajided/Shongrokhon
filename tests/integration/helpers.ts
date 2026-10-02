@@ -77,3 +77,48 @@ export async function walletOf(userId: string) {
   if (error) throw error;
   return { id: data.id as string, balance: Number(data.balance) };
 }
+
+export interface PayBody {
+  merchantId: string;
+  amount: number;
+  pin?: string;
+  idempotencyKey: string;
+  note?: string;
+  confirm?: boolean;
+}
+
+/** Pays through the `pay` Edge Function (scan -> score -> execute), exactly like the app. */
+export async function pay(accessToken: string, body: PayBody): Promise<{ status: number; data: Record<string, any> }> {
+  const res = await fetch(`${stackEnv().url}/functions/v1/pay`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, apikey: stackEnv().anonKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return { status: res.status, data: await res.json() };
+}
+
+export type RiskConfig = Partial<Record<
+  'risk_review_threshold' | 'risk_flag_threshold' | 'anomaly_threshold' | 'network_flag_threshold' |
+  'ml_timeout_ms' | 'fallback_review_amount' | 'fallback_burst_count', number>>;
+
+/** Overrides app_config risk settings and returns a function that restores them. */
+export async function setRiskConfig(values: RiskConfig): Promise<() => Promise<void>> {
+  const { data: before, error } = await admin().from('app_config').select(Object.keys(values).join(',')).single();
+  if (error) throw error;
+  const set = async (v: object) => {
+    const res = await admin().from('app_config').update(v).eq('id', true);
+    if (res.error) throw res.error;
+  };
+  await set(values);
+  return () => set(before as object);
+}
+
+/**
+ * Thresholds no score can reach, for tests about ledger semantics, not risk
+ * decisions. Covers the fallback rules too: under parallel load an ML call can
+ * time out, and the fallback would otherwise step up a burst of payments.
+ */
+export const ALWAYS_ALLOW: RiskConfig = {
+  risk_review_threshold: 2, risk_flag_threshold: 2, anomaly_threshold: 1e9, network_flag_threshold: 2,
+  fallback_review_amount: 1e11, fallback_burst_count: 1000000,
+};

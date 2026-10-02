@@ -22,6 +22,8 @@ export const colors = {
   danger: '#B42318',
   dangerSurface: '#FDECEA',
   success: '#067647',
+  warning: '#93370D',
+  warningSurface: '#FEF0C7',
 };
 
 export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {

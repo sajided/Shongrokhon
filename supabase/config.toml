@@ -62,7 +62,7 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql"]
+sql_paths = ["./seed.sql", "./seed_history.sql"]
 
 [db.network_restrictions]
 # Enable management of network restrictions.
@@ -256,6 +256,22 @@ max_frequency = "5s"
 8801711000008 = "123456"
 8801711000009 = "123456"
 8801811000001 = "123456"
+# Phase 2 personas: U-ABUSER, U-NEW, RING-01, M-LEGIT2/3, M-PSEUDO/2/3 (supabase/seed_history.sql)
+8801811000002 = "123456"
+8801811000003 = "123456"
+8801811000011 = "123456"
+8801811000012 = "123456"
+8801811000013 = "123456"
+8801911000001 = "123456"
+8801911000002 = "123456"
+8801911000003 = "123456"
+8801911000004 = "123456"
+8801911000005 = "123456"
+8801911000006 = "123456"
+8801911000007 = "123456"
+8801911000008 = "123456"
+8801911000009 = "123456"
+8801911000010 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
@@ -397,4 +413,12 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # Public endpoint: callers are not signed in yet. Abuse is limited per phone
 # number inside the function (otp_attempts) and per IP by [auth.rate_limit].
 [functions.otp]
+verify_jwt = false
+
+# Payments: signed-in users only. The function verifies the user JWT itself
+# (auth.getClaims): the gateway check only knows the legacy HS256 secret, and
+# user tokens are signed with the asymmetric key. Scores with the ML service,
+# then calls make_payment as the caller (TC-P2-FLOW-*). ML_URL /
+# ML_SERVICE_TOKEN come from supabase/functions/.env.
+[functions.pay]
 verify_jwt = false

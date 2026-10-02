@@ -3,9 +3,10 @@ import { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { NotificationBanner } from '@/components/NotificationBanner';
 import { Button, colors, ErrorBanner } from '@/components/ui';
 import { useSession } from '@/hooks/session';
-import { ApiError, getTransactions, type TransactionRow } from '@/lib/api';
+import { ApiError, getNotifications, getTransactions, markNotificationRead, type Notice, type TransactionRow } from '@/lib/api';
 import { signOut } from '@/lib/auth';
 import { formatDateTime, formatTaka } from '@/lib/format';
 import { messageFor } from '@/lib/messages';
@@ -13,14 +14,16 @@ import { messageFor } from '@/lib/messages';
 export default function Home() {
   const { profile, refreshProfile } = useSession();
   const [rows, setRows] = useState<TransactionRow[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [txns] = await Promise.all([getTransactions({ limit: 50 }), refreshProfile()]);
+      const [txns, unread] = await Promise.all([getTransactions({ limit: 50 }), getNotifications(), refreshProfile()]);
       setRows(txns);
+      setNotices(unread);
       setError(null);
     } catch (e) {
       setError(messageFor(e instanceof ApiError ? e.code : null));
@@ -28,6 +31,11 @@ export default function Home() {
       setRefreshing(false);
     }
   }, [refreshProfile]);
+
+  const dismiss = useCallback((id: string) => {
+    setNotices((all) => all.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)));
+    markNotificationRead(id).catch(() => undefined); // shows again next time if this fails
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -51,6 +59,7 @@ export default function Home() {
               </Text>
               <Text style={styles.phone}>{profile?.phone}</Text>
             </View>
+            <NotificationBanner notices={notices} onDismiss={dismiss} />
             <Button title="Scan QR to pay" onPress={() => router.push('/scan')} testID="scan-button" />
             <ErrorBanner message={error} />
             <Text style={styles.section}>Recent transactions</Text>
@@ -78,7 +87,9 @@ function TransactionItem({ row }: { row: TransactionRow }) {
       accessibilityRole="button"
       accessibilityLabel={`${out ? 'Paid' : 'Received'} ${formatTaka(Number(row.amount))} ${out ? 'to' : 'from'} ${row.counterparty_name ?? ''}`}>
       <View style={{ flex: 1, gap: 2 }}>
-        <Text style={styles.rowTitle}>{row.counterparty_name ?? (row.type === 'TOPUP' ? 'Top-up' : 'Payment')}</Text>
+        <Text style={styles.rowTitle}>
+          {row.counterparty_name ?? (row.type === 'TOPUP' ? 'Top-up' : row.type === 'CASHOUT' ? 'Cash out' : 'Payment')}
+        </Text>
         <Text style={styles.rowMeta}>
           {formatDateTime(row.created_at)} · {row.status}
         </Text>

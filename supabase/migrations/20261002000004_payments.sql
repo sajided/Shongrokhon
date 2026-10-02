@@ -273,6 +273,8 @@ begin
 end $$;
 
 -- TC-P1-PAY-12/13: history and receipt, decrypting fields for the owner only.
+-- Dropped first so re-applying this file over migration 7 (which adds a column) works.
+drop function if exists public.get_my_transactions(int, timestamptz, uuid);
 create or replace function public.get_my_transactions(
   p_limit int default 50,
   p_before timestamptz default null,

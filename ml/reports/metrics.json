@@ -1,0 +1,169 @@
+{
+  "model_version": "p2-1561165e",
+  "training_date": "2026-10-02",
+  "thresholds": {
+    "review": 0.25,
+    "flag": 0.5,
+    "anomaly": 0.0,
+    "flag_target_fpr": 0.003,
+    "review_target_fpr": 0.008,
+    "contamination": 0.01
+  },
+  "gates": {
+    "pr_auc_min": 0.9,
+    "recall_at_flag_min": 0.85,
+    "fpr_at_flag_max": 0.01,
+    "normal_legit_below_review_min": 0.99,
+    "segment_fpr_multiple_max": 3.0,
+    "segment_fpr_floor": 0.01,
+    "if_in_pattern_not_flagged_min": 0.95,
+    "if_spike_flagged_min": 0.95,
+    "if_night_score_increase_min": 0.9,
+    "if_velocity_flagged_min": 0.95
+  },
+  "xgb": {
+    "pr_auc": 1.0,
+    "recall_at_flag": 1.0,
+    "fpr_at_flag": 0.0,
+    "fnr_at_flag": 0.0,
+    "precision_at_flag": 1.0,
+    "confusion_at_flag": {
+      "tn": 3963,
+      "fp": 0,
+      "fn": 0,
+      "tp": 121
+    },
+    "recall_at_review": 1.0,
+    "fpr_at_review": 0.0,
+    "normal_legit_below_review": 1.0,
+    "abuser_pseudo_above_flag": 1.0,
+    "fpr_by_region": {
+      "Barishal": {
+        "fpr": 0.0,
+        "fp": 0,
+        "negatives": 476,
+        "fpr_lower95": 8.604176613334069e-19
+      },
+      "Chattogram": {
+        "fpr": 0.0,
+        "fp": 0,
+        "negatives": 446,
+        "fpr_lower95": 0.0
+      },
+      "Dhaka": {
+        "fpr": 0.0,
+        "fp": 0,
+        "negatives": 561,
+        "fpr_lower95": 4.3073131919771347e-19
+      },
+      "Khulna": {
+        "fpr": 0.0,
+        "fp": 0,
+        "negatives": 692,
+        "fpr_lower95": 0.0
+      },
+      "Mymensingh": {
+        "fpr": 0.0,
+        "fp": 0,
+        "negatives": 420,
+        "fpr_lower95": 0.0
+      },
+      "Rajshahi": {
+        "fpr": 0.0,
+        "fp": 0,
+        "negatives": 435,
+        "fpr_lower95": 8.597688916113594e-19
+      },
+      "Rangpur": {
+        "fpr": 0.0,
+        "fp": 0,
+        "negatives": 474,
+        "fpr_lower95": 0.0
+      },
+      "Sylhet": {
+        "fpr": 0.0,
+        "fp": 0,
+        "negatives": 342,
+        "fpr_lower95": 0.0
+      }
+    },
+    "fpr_by_segment": {
+      "cashheavy": {
+        "fpr": 0.0,
+        "fp": 0,
+        "negatives": 285,
+        "fpr_lower95": 0.0
+      },
+      "drift": {
+        "fpr": 0.0,
+        "fp": 0,
+        "negatives": 375,
+        "fpr_lower95": 8.585663552937463e-19
+      },
+      "normal": {
+        "fpr": 0.0,
+        "fp": 0,
+        "negatives": 3186,
+        "fpr_lower95": 0.0
+      }
+    },
+    "fairness_limit": 0.01,
+    "test_rows": 4084,
+    "test_positives": 121
+  },
+  "iforest": {
+    "users": 60,
+    "in_pattern_not_flagged": 1.0,
+    "spike_flagged": 1.0,
+    "night_score_increase": 0.9833333333333333,
+    "velocity_flagged": 1.0,
+    "drift_alert_rate_before": 0.02197213290460879,
+    "drift_alert_rate_after_retrain": 0.01929260450160772
+  },
+  "contamination_sweep": [
+    {
+      "contamination": 0.01,
+      "val_alert_rate": 0.008827238335435058,
+      "spike_detection": 1.0,
+      "chosen": true
+    },
+    {
+      "contamination": 0.02,
+      "val_alert_rate": 0.019167717528373266,
+      "spike_detection": 1.0,
+      "chosen": false
+    },
+    {
+      "contamination": 0.03,
+      "val_alert_rate": 0.02824716267339218,
+      "spike_detection": 1.0,
+      "chosen": false
+    },
+    {
+      "contamination": 0.04,
+      "val_alert_rate": 0.040100882723833546,
+      "spike_detection": 1.0,
+      "chosen": false
+    },
+    {
+      "contamination": 0.05,
+      "val_alert_rate": 0.04943253467843632,
+      "spike_detection": 1.0,
+      "chosen": false
+    }
+  ],
+  "checks": {
+    "XGB-03 pr_auc": true,
+    "XGB-03 recall_at_flag": true,
+    "XGB-03 fpr_at_flag": true,
+    "XGB-05 normal_legit_below_review": true,
+    "XGB-06 minority_recall": true,
+    "XGB-11 fairness": true,
+    "IF-02 in_pattern": true,
+    "IF-03 spike": true,
+    "IF-04 night": true,
+    "IF-05 velocity": true,
+    "IF-07 drift": true
+  },
+  "note": "Synthetic data (synth.py). Metrics validate the pipeline, not real-world performance."
+}

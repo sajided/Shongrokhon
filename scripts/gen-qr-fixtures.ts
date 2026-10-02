@@ -32,6 +32,11 @@ const fixtures: Record<string, { payload: string; expect: string }> = {
     }),
     expect: 'dynamic, ৳250.00 read-only (valid for 30 days from generation)',
   },
+  // Phase 2 personas (supabase/seed_history.sql).
+  'valid-static-mpseudo': {
+    payload: buildBanglaQr({ merchantId: 'MPSEUDO01', merchantName: 'Quick Mart' }),
+    expect: 'static, merchant MPSEUDO01 (M-PSEUDO)',
+  },
   'valid-static-unregistered': {
     payload: buildBanglaQr({ merchantId: 'NOPE9999', merchantName: 'Ghost Shop' }),
     expect: 'parses, but the server reports MERCHANT_NOT_FOUND',

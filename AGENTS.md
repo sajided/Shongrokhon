@@ -1,41 +1,46 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+# AGENTS.md
 
-## Expo has changed — do not trust your training data
+Project Shongrokhon is an MFS wallet with an AI financial coach. It is a **web app**: Expo SDK 57 renders it with react-native-web, expo-router builds it as a single-page app, and Supabase is the backend.
+- **Full project guide:** `CLAUDE.md` covers layout, commands, backend rules and testing gotchas. Read it first; this file covers what applies to any coding agent.
+- **Spec:** `unified_mfs_ai_financial_coach_prd.md`.
+- **Test plan:** `testcase.md`.
+- **Phase 1 results:** `docs/phase1-test-matrix.md`.
 
-Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
+## Platform
+- **Web only.** Do not add iOS/Android code, `ios/` or `android/` directories, native config plugins, EAS builds, Expo Go workflows, or Maestro.
+- **Write cross-platform React Native primitives** (`View`, `Text`, `Pressable`, `TextInput`). react-native-web renders them in the browser.
+- **Browser APIs** such as `navigator`, `window` and `localStorage` are allowed. Guard any top-level access with `typeof window !== 'undefined'`.
+- **Layout is mobile-first:** a single column, capped at 480px wide and centered.
+- **The camera** (`expo-camera` on web) needs HTTPS or `localhost`. Always keep the QR image upload path working as the fallback.
 
-1. Read the major version of the `expo` package in `package.json`.
-2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
-3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
+## Expo has changed: do not trust your training data
+Expo ships breaking changes every SDK release. Before writing code that touches an Expo or React Native API:
+1. Check the `expo` major version in `package.json` (currently 57).
+2. Read the matching versioned docs at `https://docs.expo.dev/versions/v57.0.0/`, or the package's `.d.ts` in `node_modules`.
+3. For anything else, start from https://docs.expo.dev/llms.txt and follow its links. Never answer from memory.
 
 ## Commands
-
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
-
 ```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
+npx expo install <package>   # add Expo/RN packages (resolves SDK-compatible versions)
+npm start                    # web dev server
+npm run lint                 # expo lint (includes React Compiler rules)
+npm run typecheck            # tsc --noEmit
+npm test                     # Jest unit + component tests
+npm run test:db              # pgTAP database tests + migration idempotency
+npm run test:integration     # HTTP tests against local Supabase (resets the DB)
+npm run test:e2e             # Playwright browser tests (resets the DB, builds + serves dist/)
+npm run build                # production web export -> dist/
 ```
+- **Before declaring a task done:** run lint, typecheck and `npm test`. If you touched SQL, run `npm run test:db`. If you touched flows, run the integration and E2E suites, one after the other.
 
-Run lint and typecheck before declaring any task done.
+## Routing
+- **Expo Router** handles all navigation. Every file in `src/app/` is a route, and `_layout.tsx` files define the navigators.
+- **Auth gating** lives in `src/app/_layout.tsx` via `Stack.Protected`. A new screen must be registered in the correct guard group.
+- **Non-route code** goes elsewhere: logic in `src/lib/`, UI in `src/components/`, hooks in `src/hooks/`.
 
-## Navigation & Routing
-
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
-
-## Building with EAS
-
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
-
-## Rules
-
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
-- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+## Non-negotiables
+- **Clients never write database tables.** Money moves only through `SECURITY DEFINER` functions that post balanced ledger entries. Details are in `CLAUDE.md` under "Backend rules".
+- **Never expose the service-role key or `sb_secret_*` keys.** Don't put them in `.env`, an `EXPO_PUBLIC_*` variable, or any file the app imports. `npm run check:secrets` must pass.
+- **Every user-facing error code needs a message** in `src/lib/messages.ts`.
+- **Interactive elements need a `testID`.** On web it becomes `data-testid`, which the tests depend on.
+- **When you add or change behavior covered by `testcase.md`,** add or update the test and its row in `docs/phase1-test-matrix.md`.

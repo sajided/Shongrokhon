@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # TC-P1-SETUP-06: lint / type errors fail the build. Unit + component tests.
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --ci
+      # TC-P1-SETUP-05
+      - run: npm run check:secrets
+
+  # Database (pgTAP), migration idempotency, and integration tests on a local stack.
+  supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: npm ci
+      - name: Start Supabase
+        run: |
+          echo "SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN=ci-not-used" > supabase/.env
+          supabase start -x studio,postgres-meta,imgproxy,logflare,vector,supavisor,mailpit,realtime,storage-api
+      - run: supabase test db
+      - run: ./scripts/check-migrations-idempotent.sh
+      - run: npm run test:integration
+      # Browser E2E (Playwright + headless Chromium with a fake camera)
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npx playwright install --with-deps chromium
+      - name: Write app env for the web build
+        run: supabase status -o env | sed -n 's/^API_URL=/EXPO_PUBLIC_SUPABASE_URL=/p; s/^ANON_KEY=/EXPO_PUBLIC_SUPABASE_ANON_KEY=/p' | tr -d '"' > .env
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report

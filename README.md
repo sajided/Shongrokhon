@@ -1,56 +1,44 @@
-# Welcome to your Expo app 👋
+# Shongrokhon — Unified MFS & AI Financial Coach
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Phase 1 (Foundation & Core MFS) of the PRD, delivered as a **web app** (Expo for web, mobile-first layout): Supabase auth and ledger, Bangla QR scanning in the browser, and the payment flow.
+The PRD is in `unified_mfs_ai_financial_coach_prd.md`. The test plan is in `testcase.md`, and the Phase 1 results are in `docs/phase1-test-matrix.md`.
 
-## Get started
+## Stack
+- **App:** Expo SDK 57 for web (react-native-web, expo-router, SPA output), TypeScript (`src/`)
+  - **QR scanning:** browser camera via `expo-camera` (native `BarcodeDetector`, zxing-wasm fallback for Safari/Firefox), or image upload. The camera needs HTTPS or `localhost`.
+- **Backend:** Supabase (Postgres + Auth + Edge Functions) in `supabase/`
+  - **Money movement:** happens only inside `SECURITY DEFINER` functions (`make_payment`, `admin_credit_wallet`). Clients get read-only, row-level-secured access.
+  - **Ledger:** double-entry `ledger_entries`, append-only. Balances can never go negative.
+  - **OTP:** the `otp` Edge Function adds a per-number attempt counter, lockout, and expiry on top of GoTrue phone auth.
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+## Setup
 ```bash
-npm run reset-project
+npm install
+supabase start -x studio,postgres-meta,imgproxy,logflare,vector,supavisor,mailpit,realtime,storage-api
+cp .env.example .env   # fill API_URL / ANON_KEY from `supabase status -o env`
+npm start              # dev server -> http://localhost:8081
+npm run build          # production build -> dist/ (static SPA; serve with an index.html fallback)
 ```
+`supabase/.env` must define `SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN`. Any value works locally, because test numbers never reach Twilio.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Test personas (seeded by `supabase/seed.sql`)
+Every test number uses OTP `123456`.
 
-### Other setup steps
+| Persona | Phone | Balance | PIN |
+|---|---|---|---|
+| U-NORMAL | 01711000001 | ৳5,000 | 12345 |
+| U-LOW | 01711000002 | ৳100 | 12345 |
+| M-LEGIT (merchant `MLEGIT0001`, "Rahim Store") | 01811000001 | ৳0 | 12345 |
+| Unregistered, for sign-up tests | 01711000003 … 01711000009 | — | — |
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+The QR fixtures (PNG + payloads) come from `npm run qr:fixtures` and are written to `fixtures/qr/`.
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Tests
+| Command | What |
+|---|---|
+| `npm test` | Unit + component tests (Jest, RNTL) |
+| `npm run test:db` | pgTAP schema / RLS / payment tests, plus the migration idempotency check |
+| `npm run test:integration` | Resets the local DB, then exercises the OTP function, PostgREST, RLS and concurrency over HTTP |
+| `npm run check:secrets` | Builds the production web bundle and fails if any server key is inside |
+| `npm run test:e2e` | Playwright browser E2E: resets the DB, builds and serves the web app, scans QR images and a fake camera stream |
+| `npm run lint && npm run typecheck` | Static checks |

@@ -1,0 +1,60 @@
+-- Shared pgTAP helpers, included with \ir from each *.test.sql file.
+-- Everything lives in pg_temp, so it disappears with the test session.
+
+create extension if not exists pgtap with schema extensions;
+
+-- Creates an auth user (the trigger adds profile + customer wallet), a live
+-- session whose id equals the user id, an optional PIN and an opening balance.
+create or replace function pg_temp.mk_user(p_phone text, p_balance numeric default 0, p_pin text default '12345')
+returns uuid language plpgsql as $$
+declare
+  v_id uuid := gen_random_uuid();
+begin
+  insert into auth.users (instance_id, id, aud, role, phone, phone_confirmed_at, created_at, updated_at)
+  values ('00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated', p_phone, now(), now(), now());
+  insert into auth.sessions (id, user_id, created_at, updated_at) values (v_id, v_id, now(), now());
+  if p_pin is not null then
+    update public.users set pin_hash = extensions.crypt(p_pin, extensions.gen_salt('bf', 4)) where id = v_id;
+  end if;
+  if p_balance > 0 then
+    perform public.admin_credit_wallet(
+      (select id from public.wallets where user_id = v_id and kind = 'customer'), p_balance);
+  end if;
+  return v_id;
+end $$;
+
+create or replace function pg_temp.mk_merchant(p_phone text, p_merchant_id text, p_name text)
+returns uuid language plpgsql as $$
+declare
+  v_id uuid := pg_temp.mk_user(p_phone, 0, '12345');
+begin
+  update public.users set role = 'merchant' where id = v_id;
+  insert into public.wallets (user_id, kind, merchant_id, merchant_name) values (v_id, 'merchant', p_merchant_id, p_name);
+  return v_id;
+end $$;
+
+create or replace function pg_temp.balance_of(p_user uuid, p_kind public.wallet_kind default 'customer')
+returns numeric language sql as $$
+  select balance from public.wallets where user_id = p_user and kind = p_kind;
+$$;
+
+create or replace function pg_temp.wallet_of(p_user uuid, p_kind public.wallet_kind default 'customer')
+returns uuid language sql as $$
+  select id from public.wallets where user_id = p_user and kind = p_kind;
+$$;
+
+-- Impersonate a signed-in user the way PostgREST does. Undo with `reset role`.
+create or replace function pg_temp.as_user(p_user uuid, p_session uuid default null)
+returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claims', json_build_object(
+    'sub', p_user, 'role', 'authenticated', 'session_id', coalesce(p_session, p_user))::text, true);
+  perform set_config('role', 'authenticated', true);
+end $$;
+
+create or replace function pg_temp.as_anon()
+returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+  perform set_config('role', 'anon', true);
+end $$;

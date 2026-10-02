@@ -41,3 +41,12 @@ example
 # generated native folders
 /ios
 /android
+
+.env
+supabase/.env
+supabase/.temp/
+fixtures/qr/*.png
+fixtures/qr/*.y4m
+playwright-report/
+test-results/
+fixtures/qr/index.json

@@ -1,98 +1,115 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Button, colors, ErrorBanner } from '@/components/ui';
+import { useSession } from '@/hooks/session';
+import { ApiError, getTransactions, type TransactionRow } from '@/lib/api';
+import { signOut } from '@/lib/auth';
+import { formatDateTime, formatTaka } from '@/lib/format';
+import { messageFor } from '@/lib/messages';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+export default function Home() {
+  const { profile, refreshProfile } = useSession();
+  const [rows, setRows] = useState<TransactionRow[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [txns] = await Promise.all([getTransactions({ limit: 50 }), refreshProfile()]);
+      setRows(txns);
+      setError(null);
+    } catch (e) {
+      setError(messageFor(e instanceof ApiError ? e.code : null));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshProfile]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+      <FlatList
+        data={rows}
+        keyExtractor={(r) => r.id}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} />}
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <View style={styles.balanceCard}>
+              <Text style={styles.balanceLabel}>Available balance</Text>
+              <Text style={styles.balance} testID="balance">
+                {profile ? formatTaka(Number(profile.balance)) : '—'}
+              </Text>
+              <Text style={styles.phone}>{profile?.phone}</Text>
+            </View>
+            <Button title="Scan QR to pay" onPress={() => router.push('/scan')} testID="scan-button" />
+            <ErrorBanner message={error} />
+            <Text style={styles.section}>Recent transactions</Text>
+          </View>
+        }
+        ListEmptyComponent={<Text style={styles.empty}>No transactions yet.</Text>}
+        renderItem={({ item }) => <TransactionItem row={item} />}
+        ListFooterComponent={
+          <View style={{ marginTop: 24 }}>
+            <Button title="Log out" variant="secondary" onPress={signOut} testID="logout" />
+          </View>
+        }
+      />
+    </SafeAreaView>
   );
 }
 
-export default function HomeScreen() {
+function TransactionItem({ row }: { row: TransactionRow }) {
+  const out = row.direction === 'OUT';
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <Pressable
+      style={styles.row}
+      onPress={() => router.push(`/receipt/${row.id}`)}
+      testID="txn-row"
+      accessibilityRole="button"
+      accessibilityLabel={`${out ? 'Paid' : 'Received'} ${formatTaka(Number(row.amount))} ${out ? 'to' : 'from'} ${row.counterparty_name ?? ''}`}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={styles.rowTitle}>{row.counterparty_name ?? (row.type === 'TOPUP' ? 'Top-up' : 'Payment')}</Text>
+        <Text style={styles.rowMeta}>
+          {formatDateTime(row.created_at)} · {row.status}
+        </Text>
+      </View>
+      <Text style={[styles.rowAmount, { color: out ? colors.text : colors.success }]}>
+        {out ? '−' : '+'}
+        {formatTaka(Number(row.amount))}
+      </Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
+  safe: { flex: 1, backgroundColor: colors.background },
+  content: { padding: 20, width: '100%', maxWidth: 480, alignSelf: 'center' },
+  header: { gap: 16, marginBottom: 8 },
+  balanceCard: { backgroundColor: colors.primary, borderRadius: 16, padding: 20, gap: 4 },
+  balanceLabel: { color: '#D7F0E6', fontSize: 14 },
+  balance: { color: '#FFFFFF', fontSize: 32, fontWeight: '700' },
+  phone: { color: '#D7F0E6', fontSize: 13 },
+  section: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: 8 },
+  empty: { color: colors.muted, paddingVertical: 16 },
+  row: {
     flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    gap: 12,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  rowTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
+  rowMeta: { fontSize: 13, color: colors.muted },
+  rowAmount: { fontSize: 16, fontWeight: '700' },
 });

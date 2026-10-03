@@ -15,6 +15,7 @@ export const bn: Record<MessageKey, string> = {
   'nav.savings': 'সঞ্চয় পরিকল্পনা',
   'nav.forecast': 'টাকার প্রবাহের পূর্বাভাস',
   'nav.cashout': 'ক্যাশ আউট',
+  'nav.cashin': 'ক্যাশ ইন',
   'nav.send': 'সেন্ড মানি',
   'nav.bills': 'বিল পরিশোধ',
   'nav.settings': 'সেটিংস',
@@ -37,7 +38,7 @@ export const bn: Record<MessageKey, string> = {
   'config.body': 'অ্যাপটির কিছু প্রয়োজনীয় সেটিং নেই, তাই চালু হতে পারছে না।',
   'config.fix': '.env.example কপি করে .env বানান, মানগুলো বসান, তারপর বান্ডলার আবার চালু করুন।',
 
-  'signIn.title': 'স্বাগতম',
+  'signIn.title': 'সংরক্ষণে স্বাগতম',
   'signIn.body': 'আপনার মোবাইল নম্বর দিন। নতুন নম্বর হলে নিজে থেকেই রেজিস্ট্রেশন হয়ে যাবে।',
   'signIn.phone': 'মোবাইল নম্বর',
   'signIn.bodyEmail': 'আপনার ইমেইল ঠিকানা দিন। নতুন ঠিকানা হলে নিজে থেকেই রেজিস্ট্রেশন হয়ে যাবে।',
@@ -60,6 +61,7 @@ export const bn: Record<MessageKey, string> = {
   'pin.save': 'পিন সেভ করুন',
 
   'home.balance': 'বর্তমান ব্যালেন্স',
+  'home.cashin': 'ক্যাশ ইন',
   'home.scan': 'স্ক্যান করে পেমেন্ট',
   'home.cashout': 'ক্যাশ আউট',
   'home.send': 'সেন্ড মানি',
@@ -139,6 +141,15 @@ export const bn: Record<MessageKey, string> = {
   'receipt.text.amount': 'পরিমাণ',
   'receipt.text.date': 'তারিখ',
   'receipt.text.status': 'অবস্থা',
+
+  // Cash-in
+  'cashin.title': 'ক্যাশ ইন',
+  'cashin.body': 'আপনার সংরক্ষণ ওয়ালেটে টাকা জমা করুন।',
+  'cashin.amount': 'পরিমাণ',
+  'cashin.agent': 'এজেন্ট কোড',
+  'cashin.submit': 'ক্যাশ ইন সম্পন্ন করুন',
+  'cashin.success': 'ক্যাশ ইন সফল হয়েছে',
+  'cashin.successBody': 'আপনার ওয়ালেটে ৳{amount} যোগ করা হয়েছে।',
 
   'cashout.agentCode': 'এজেন্ট নম্বর',
   'cashout.agentHint': 'এজেন্ট তাঁর কাউন্টারে এই নম্বরটি দেখান, যেমন AGENT001।',

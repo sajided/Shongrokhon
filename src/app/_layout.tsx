@@ -78,6 +78,7 @@ function RootNavigator() {
         <Stack.Screen name="coach/savings" options={{ title: t('nav.savings') }} />
         <Stack.Screen name="coach/forecast" options={{ title: t('nav.forecast') }} />
         <Stack.Screen name="cashout" options={{ title: t('nav.cashout') }} />
+        <Stack.Screen name="cashin" options={{ title: t('nav.cashin') }} />
         <Stack.Screen name="send" options={{ title: t('nav.send') }} />
         <Stack.Screen name="bills" options={{ title: t('nav.bills') }} />
         <Stack.Screen name="settings" options={{ title: t('nav.settings') }} />

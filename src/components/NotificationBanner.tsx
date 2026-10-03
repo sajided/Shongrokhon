@@ -52,7 +52,7 @@ export function NotificationBanner({ notices, onDismiss }: { notices: Notice[]; 
 
 const styles = StyleSheet.create({
   list: { gap: 12 },
-  notice: { backgroundColor: colors.warningSurface, borderRadius: 12, padding: 16, gap: 8 },
+  notice: { backgroundColor: colors.warningSurface, borderRadius: 20, padding: 16, gap: 8 },
   title: { color: colors.warning, fontSize: 16, fontWeight: '700' },
   body: { color: colors.text, fontSize: 14, lineHeight: 20 },
 });

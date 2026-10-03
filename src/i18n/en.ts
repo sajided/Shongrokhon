@@ -17,6 +17,7 @@ export const en = {
   'nav.savings': 'Savings planner',
   'nav.forecast': 'Cash-flow forecast',
   'nav.cashout': 'Cash out',
+  'nav.cashin': 'Cash in',
   'nav.send': 'Send money',
   'nav.bills': 'Pay a bill',
   'nav.settings': 'Settings',
@@ -43,7 +44,9 @@ export const en = {
   'config.fix': 'Copy .env.example to .env, fill in the values, and restart the bundler.',
 
   // Sign-in / verify / PIN
-  'signIn.title': 'Welcome',
+  'signIn.brandBadge': 'SHONGROKHON FINANCE',
+  'signIn.security': '256-bit encrypted authentication',
+  'signIn.title': 'Welcome to Shongrokhon',
   'signIn.body': 'Enter your mobile number. New numbers are registered automatically.',
   'signIn.phone': 'Mobile number',
   'signIn.bodyEmail': 'Enter your email address. New addresses are registered automatically.',
@@ -67,6 +70,7 @@ export const en = {
 
   // Home
   'home.balance': 'Available balance',
+  'home.cashin': 'Cash in',
   'home.scan': 'Scan & pay',
   'home.cashout': 'Cash out',
   'home.send': 'Send money',
@@ -154,6 +158,15 @@ export const en = {
   'receipt.text.amount': 'Amount',
   'receipt.text.date': 'Date',
   'receipt.text.status': 'Status',
+
+  // Cash-in
+  'cashin.title': 'Cash in',
+  'cashin.body': 'Deposit funds into your Shongrokhon wallet.',
+  'cashin.amount': 'Amount',
+  'cashin.agent': 'Agent code',
+  'cashin.submit': 'Complete Cash In',
+  'cashin.success': 'Cash in successful',
+  'cashin.successBody': '৳{amount} has been added to your wallet.',
 
   // Cash-out (Phase 4)
   'cashout.agentCode': 'Agent number',

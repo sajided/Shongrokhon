@@ -50,7 +50,7 @@ function normalizeRedirect(raw: unknown): string | null {
   if (typeof raw !== 'string' || raw.length > 2048) return null;
   try {
     const url = new URL(raw);
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : null;
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.origin : null;
   } catch {
     return null;
   }

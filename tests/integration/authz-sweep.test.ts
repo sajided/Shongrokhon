@@ -17,6 +17,7 @@ const REVIEWED: Record<string, string> = {
   analyst_act: 'analyst role required (NOT_ANALYST)',
   analyst_get_alert: 'analyst role required',
   analyst_list_alerts: 'analyst role required',
+  cash_in: "credits caller's own wallet only",
   cashout_nudge: "caller's own cash-outs",
   create_savings_goal: 'creates for the caller',
   delete_my_account: 'caller only, PIN required',

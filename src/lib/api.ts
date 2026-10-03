@@ -347,6 +347,9 @@ export interface Nudge {
 
 export const cashoutNudge = (amount: number) => callRpc<Nudge>('cashout_nudge', { p_amount: amount });
 
+export const cashIn = (amount: number, source?: string) =>
+  callRpc<string>('cash_in', { p_amount: amount, p_source: source ?? 'Agent Cash-in' });
+
 export const logNudgeChoice = (nudgeId: string, choice: NudgeChoice) =>
   callRpc<void>('log_nudge_choice', { p_nudge_id: nudgeId, p_choice: choice });
 

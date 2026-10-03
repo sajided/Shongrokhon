@@ -47,7 +47,7 @@ export const colors = {
   muted: '#6B6B6B',
   border: '#E8E8E8',
   surface: '#F2F2F2',
-  background: '#FFFFFF',
+  background: '#F9FAFB',
   // Wallet cards on the home screen: a bright frame around a deeper body.
   red: '#C00000',
   redDeep: '#7A0000',
@@ -83,8 +83,8 @@ export function Title({ children }: { children: ReactNode }) {
   );
 }
 
-export function Body({ children, muted, testID }: { children: ReactNode; muted?: boolean; testID?: string }) {
-  return <Text style={[styles.body, muted && { color: colors.muted }]} testID={testID}>{children}</Text>;
+export function Body({ children, muted, testID, style }: { children: ReactNode; muted?: boolean; testID?: string; style?: TextProps['style'] }) {
+  return <Text style={[styles.body, muted && { color: colors.muted }, style]} testID={testID}>{children}</Text>;
 }
 
 export function Button({

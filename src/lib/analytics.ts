@@ -7,7 +7,7 @@ import { useCallback } from 'react';
 
 import { callRpc } from './api';
 
-export type Screen = 'home' | 'coach' | 'savings' | 'forecast' | 'cashout' | 'send' | 'bills' | 'settings';
+export type Screen = 'home' | 'coach' | 'savings' | 'forecast' | 'cashout' | 'cashin' | 'send' | 'bills' | 'settings';
 export type AnalyticsEvent =
   | { event: 'screen_view'; props: { screen: Screen } }
   | { event: 'insights_loaded'; props: { period: string; source: string } }

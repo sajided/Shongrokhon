@@ -1,0 +1,21 @@
+{
+  "users": 50,
+  "history_days": 120,
+  "horizon_days": 30,
+  "mae_taka": 2555,
+  "day30_error_taka": 4057,
+  "median_nmae_day30": 0.1116,
+  "mean_nmae_day30": 0.1564,
+  "p90_nmae_day30": 0.3673,
+  "naive_mean_nmae_day30": 0.1447,
+  "path_mean_nmae": 0.1007,
+  "naive_path_mean_nmae": 0.2912,
+  "skill_vs_naive": 0.6543,
+  "recurring_detected_share": 0.96,
+  "gates": {
+    "median_nmae_day30_max": 0.15,
+    "skill_vs_naive_min": 0.3
+  },
+  "pass": true,
+  "note": "Synthetic users (seeded). Validates the forecasting method, not real-world accuracy."
+}

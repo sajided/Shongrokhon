@@ -102,7 +102,20 @@ export type RiskConfig = Partial<Record<
   'ml_timeout_ms' | 'fallback_review_amount' | 'fallback_burst_count', number>>;
 
 /** Overrides app_config risk settings and returns a function that restores them. */
-export async function setRiskConfig(values: RiskConfig): Promise<() => Promise<void>> {
+export function setRiskConfig(values: RiskConfig): Promise<() => Promise<void>> {
+  return setAppConfig(values);
+}
+
+export type CoachConfig = Partial<{
+  coach_llm_mode: 'live' | 'mock' | 'off';
+  coach_rate_per_minute: number;
+  coach_llm_timeout_ms: number;
+  coach_mock_delay_ms: number;
+  coach_min_txns: number;
+}>;
+
+/** Overrides any app_config columns and returns a function that restores them. */
+export async function setAppConfig(values: RiskConfig | CoachConfig): Promise<() => Promise<void>> {
   const { data: before, error } = await admin().from('app_config').select(Object.keys(values).join(',')).single();
   if (error) throw error;
   const set = async (v: object) => {
@@ -122,3 +135,11 @@ export const ALWAYS_ALLOW: RiskConfig = {
   risk_review_threshold: 2, risk_flag_threshold: 2, anomaly_threshold: 1e9, network_flag_threshold: 2,
   fallback_review_amount: 1e11, fallback_burst_count: 1000000,
 };
+
+/** Calls the `coach` Edge Function like the app; accessToken null sends no JWT. */
+export async function coach(accessToken: string | null, body: Record<string, unknown>): Promise<{ status: number; data: Record<string, any> }> {
+  const headers: Record<string, string> = { apikey: stackEnv().anonKey, 'Content-Type': 'application/json' };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  const res = await fetch(`${stackEnv().url}/functions/v1/coach`, { method: 'POST', headers, body: JSON.stringify(body) });
+  return { status: res.status, data: await res.json() };
+}

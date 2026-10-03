@@ -1,4 +1,6 @@
-import { isValidOtp, isValidPin, normalizeBdPhone, toAsciiDigits, validateAmount } from './validation';
+import {
+  isValidOtp, isValidPin, normalizeBdPhone, toAsciiDigits, validateAmount, validateGoalAmount, validateGoalMonths,
+} from './validation';
 
 describe('TC-P1-AUTH-02: phone validation', () => {
   it.each([
@@ -63,4 +65,21 @@ describe('PIN and OTP format', () => {
   it('converts Bangla digits', () => {
     expect(toAsciiDigits('৩০০০০')).toBe('30000');
   });
+});
+
+describe('TC-P3-SAVE-03/08: savings goal inputs', () => {
+  it.each([
+    ['30000', 30000], ['৩০০০০', 30000], ['30,000', 30000], ['৩০,০০০.৫০', 30000.5],
+  ])('accepts %s', (input, value) => expect(validateGoalAmount(input)).toEqual({ ok: true, value }));
+
+  it.each([
+    ['', 'REQUIRED'], ['0', 'INVALID_AMOUNT'], ['-500', 'INVALID_AMOUNT'], ['abc', 'INVALID_AMOUNT'],
+    ['100.555', 'AMOUNT_TOO_PRECISE'], ['1000001', 'GOAL_AMOUNT_TOO_LARGE'],
+  ])('rejects %s', (input, code) => expect(validateGoalAmount(input)).toEqual({ ok: false, code }));
+
+  it.each([['6', 6], ['৬', 6], ['60', 60], ['1', 1]])('months %s', (input, value) =>
+    expect(validateGoalMonths(input)).toEqual({ ok: true, value }));
+
+  it.each(['0', '61', '-1', '1.5', 'six', ''])('rejects months %s', (input) =>
+    expect(validateGoalMonths(input)).toEqual({ ok: false, code: 'GOAL_MONTHS_INVALID' }));
 });

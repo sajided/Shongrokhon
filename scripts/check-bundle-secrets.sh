@@ -45,6 +45,16 @@ if [ -f supabase/functions/.env ]; then
 fi
 check "internal ML URL" 'shongrokhon-ml:8000'
 
+# Phase 3 (TC-P3-LLM-08): the LLM key stays in the coach Edge Function; the
+# app never calls an LLM API directly.
+check "LLM key variable name" 'ANTHROPIC_API_KEY'
+check "Anthropic API key" 'sk-ant-[A-Za-z0-9_-]{10,}'
+check "LLM API host" 'api\.anthropic\.com'
+if [ -f supabase/functions/.env ]; then
+  key="$(sed -n 's/^ANTHROPIC_API_KEY=//p' supabase/functions/.env)"
+  [ -n "$key" ] && check "ANTHROPIC_API_KEY value" "$(printf '%s' "$key" | sed 's/[.[\*^$()+?{|]/\\&/g')"
+fi
+
 # Any JWT in the bundle must carry role=anon.
 while IFS= read -r jwt; do
   payload="$(printf '%s' "$jwt" | cut -d. -f2 | tr '_-' '/+')"

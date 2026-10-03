@@ -12,6 +12,8 @@ export const PHONES = {
   abuser: '01911000001', // U-ABUSER ৳20,000
   newUser: '01911000002', // U-NEW ৳0, no history
   ringMember: '01911000010', // RING-01-8 ৳5,000
+  cashHeavy: '01611000001', // U-CASHHEAVY ৳3,000, 10-12 cash-outs a month
+  tight: '01611000002', // U-TIGHT: ~৳3,000/month surplus, rent due it cannot cover
 } as const;
 
 /** Signs in through the real sign-in screen (OTP 123456). */

@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { readConfig } from './config';
 import { ApiError, NetworkError, SessionExpiredError } from './errors';
+import type { CashHistory } from './forecast';
 import { getSupabase } from './supabase';
 
 export { ApiError, NetworkError, SessionExpiredError };
@@ -203,3 +204,86 @@ export interface Notice {
 export const getNotifications = (limit = 20) => callRpc<Notice[]>('get_my_notifications', { p_limit: limit });
 
 export const markNotificationRead = (id: string) => callRpc<void>('mark_notification_read', { p_id: id });
+
+// ---------------------------------------------------------------------------
+// AI coach and savings planner (Phase 3). Numbers come from SQL RPCs; only the
+// insight text comes from the `coach` Edge Function (which never sends the
+// LLM names, phone numbers or ids).
+// ---------------------------------------------------------------------------
+
+export type CoachPeriod = 'WEEK' | 'MONTH' | '3M';
+export type SpendCategory =
+  | 'FOOD' | 'TRANSPORT' | 'UTILITIES' | 'BILLS' | 'SHOPPING' | 'HEALTH' | 'EDUCATION' | 'SAVINGS' | 'CASH_OUT' | 'OTHERS';
+
+export interface CoachDashboard {
+  period: CoachPeriod;
+  txn_count: number;
+  income: number;
+  spending: number;
+  saved: number;
+  net: number;
+  cashout: { total: number; count: number; share: number; level: 'LOW' | 'MEDIUM' | 'HIGH' };
+  categories: { category: SpendCategory; total: number; count: number; share: number }[];
+  merchants: { label: string; name: string; category: SpendCategory; total: number; count: number }[];
+  monthly: { month: string; income: number; spending: number; cashout: number }[];
+  uncategorized: number;
+}
+
+export interface Insight {
+  kind: 'SPENDING' | 'CASH' | 'SAVING' | 'TIP';
+  title: string;
+  body: string;
+}
+
+export interface InsightsResponse {
+  status: 'OK' | 'INSUFFICIENT_DATA';
+  source?: 'LLM' | 'MOCK' | 'TEMPLATE';
+  cached?: boolean;
+  insights: Insight[];
+  categories_updated: boolean;
+}
+
+export interface AskResponse {
+  status: 'OK' | 'UNAVAILABLE';
+  topic?: 'GENERAL' | 'REGULATED_ADVICE' | 'OFF_TOPIC';
+  declined?: boolean;
+  answer: string;
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  target_amount: number;
+  months: number;
+  start_date: string;
+  created_at: string;
+  saved: number;
+  remaining: number;
+}
+
+export interface SavingsOverview {
+  surplus: { surplus: number | null; income: number | null; spending: number | null; history_days: number };
+  goals: SavingsGoal[];
+}
+
+export const getCoachDashboard = (period: CoachPeriod) =>
+  callRpc<CoachDashboard>('get_coach_dashboard', { p_period: period });
+
+export const getInsights = (period: CoachPeriod) => callFunction<InsightsResponse>('coach', { action: 'insights', period });
+
+export const askCoach = (question: string) => callFunction<AskResponse>('coach', { action: 'ask', question });
+
+export const getCashHistory = (days = 120) => callRpc<CashHistory>('get_cash_history', { p_days: days });
+
+export const getSavingsGoals = () => callRpc<SavingsOverview>('get_savings_goals');
+
+export const createSavingsGoal = (name: string, target: number, months: number) =>
+  callRpc<string>('create_savings_goal', { p_name: name, p_target: target, p_months: months });
+
+export const updateSavingsGoal = (id: string, name: string, target: number, months: number) =>
+  callRpc<void>('update_savings_goal', { p_id: id, p_name: name, p_target: target, p_months: months });
+
+export const deleteSavingsGoal = (id: string) => callRpc<void>('delete_savings_goal', { p_id: id });
+
+export const addSavingsContribution = (goalId: string, amount: number) =>
+  callRpc<void>('add_savings_contribution', { p_goal_id: goalId, p_amount: amount });

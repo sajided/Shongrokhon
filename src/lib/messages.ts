@@ -41,6 +41,17 @@ const messages: Record<string, string> = {
   SCORE_INVALID: 'We could not check this payment. Try again.',
   SCORE_EXPIRED: 'This payment took too long to confirm. Try again.',
   INVALID_SCORE: 'We could not check this payment. Try again.',
+  // AI coach and savings planner (Phase 3)
+  INVALID_PERIOD: 'Choose a period to view.',
+  INVALID_QUESTION: 'Ask a question of up to 300 characters.',
+  FORBIDDEN: 'You can only view your own data.',
+  GOAL_NAME_INVALID: 'Give your goal a name (up to 60 characters).',
+  GOAL_AMOUNT_INVALID: 'Enter a target amount greater than zero, with at most 2 decimal places.',
+  GOAL_AMOUNT_TOO_LARGE: 'The target can be at most ৳10,00,000.',
+  GOAL_MONTHS_INVALID: 'Choose between 1 and 60 months.',
+  GOAL_NOT_FOUND: 'This goal no longer exists.',
+  GOAL_LIMIT_REACHED: 'You can have up to 10 goals.',
+  CONTRIBUTION_INVALID: 'Enter an amount greater than zero.',
   // Generic
   NETWORK: 'No connection. Check your internet and try again.',
   SESSION_EXPIRED: 'Your session has ended. Please sign in again.',

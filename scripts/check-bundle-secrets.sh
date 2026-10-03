@@ -15,6 +15,10 @@ fi
 
 # --clear: Metro caches transforms, including inlined EXPO_PUBLIC_ values.
 npx expo export --clear --platform web --output-dir "$out" >/dev/null
+# Phase 4: the analyst app (admin/) is scanned too.
+if [ -d admin/node_modules ]; then
+  (cd admin && npx vite build --outDir "$out/admin" --emptyOutDir >/dev/null)
+fi
 
 fail=0
 check() {
@@ -67,4 +71,4 @@ while IFS= read -r jwt; do
 done < <(grep -rhaoE 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' "$out" | sort -u)
 
 if [ "$fail" -ne 0 ]; then exit 1; fi
-echo "SETUP-05: no secrets in the bundle (only the anon key)"
+echo "SETUP-05: no secrets in the app or admin bundles (only the anon key)"

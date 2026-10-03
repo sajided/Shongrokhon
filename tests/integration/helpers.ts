@@ -79,7 +79,11 @@ export async function walletOf(userId: string) {
 }
 
 export interface PayBody {
-  merchantId: string;
+  /** Phase 4: CASHOUT (agentCode) and TRANSFER (phone) go through the same function. */
+  kind?: 'PAYMENT' | 'CASHOUT' | 'TRANSFER';
+  agentCode?: string;
+  phone?: string;
+  merchantId?: string;
   amount: number;
   pin?: string;
   idempotencyKey: string;
@@ -106,6 +110,8 @@ export function setRiskConfig(values: RiskConfig): Promise<() => Promise<void>> 
   return setAppConfig(values);
 }
 
+export type CompanionConfig = Partial<{ nudge_min_cashouts_30d: number; nudge_max_per_day: number; cashout_daily_limit: number }>;
+
 export type CoachConfig = Partial<{
   coach_llm_mode: 'live' | 'mock' | 'off';
   coach_rate_per_minute: number;
@@ -115,7 +121,7 @@ export type CoachConfig = Partial<{
 }>;
 
 /** Overrides any app_config columns and returns a function that restores them. */
-export async function setAppConfig(values: RiskConfig | CoachConfig): Promise<() => Promise<void>> {
+export async function setAppConfig(values: RiskConfig | CoachConfig | CompanionConfig): Promise<() => Promise<void>> {
   const { data: before, error } = await admin().from('app_config').select(Object.keys(values).join(',')).single();
   if (error) throw error;
   const set = async (v: object) => {
@@ -142,4 +148,22 @@ export async function coach(accessToken: string | null, body: Record<string, unk
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   const res = await fetch(`${stackEnv().url}/functions/v1/coach`, { method: 'POST', headers, body: JSON.stringify(body) });
   return { status: res.status, data: await res.json() };
+}
+
+/** Calls any Edge Function with a bearer token (null = none). */
+export async function callFn(name: string, accessToken: string | null, body: Record<string, unknown>): Promise<{ status: number; data: Record<string, any> }> {
+  const headers: Record<string, string> = { apikey: stackEnv().anonKey, 'Content-Type': 'application/json' };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  const res = await fetch(`${stackEnv().url}/functions/v1/${name}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  return { status: res.status, data: await res.json() };
+}
+
+export const ANALYST = { email: 'analyst@shongrokhon.test', password: 'analyst-pass-123' };
+
+/** Signs the seeded compliance analyst in with email + password (admin app path). */
+export async function signInAnalyst(): Promise<{ client: SupabaseClient; accessToken: string }> {
+  const client = anon();
+  const { data, error } = await client.auth.signInWithPassword(ANALYST);
+  if (error) throw error;
+  return { client, accessToken: data.session!.access_token };
 }

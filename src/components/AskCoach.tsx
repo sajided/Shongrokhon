@@ -1,15 +1,16 @@
 // "Ask the coach" (TC-P3-LLM-05): a short question, answered by the `coach`
 // Edge Function with grounded figures; regulated advice is declined.
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { useI18n } from '@/i18n/LocaleProvider';
 import { ApiError, askCoach, type AskResponse } from '@/lib/api';
-import { messageFor } from '@/lib/messages';
 
 import { coachStyles } from './CoachCards';
-import { Button, colors, ErrorBanner, Field } from './ui';
+import { Button, colors, ErrorBanner, Field, Text } from './ui';
 
-export function AskCoach({ ask = askCoach }: { ask?: (q: string) => Promise<AskResponse> }) {
+export function AskCoach({ ask }: { ask?: (q: string, lang: 'en' | 'bn') => Promise<AskResponse> }) {
+  const { t, msg, locale } = useI18n();
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<AskResponse | null>(null);
   const [busy, setBusy] = useState(false);
@@ -19,9 +20,9 @@ export function AskCoach({ ask = askCoach }: { ask?: (q: string) => Promise<AskR
     setBusy(true);
     setError(null);
     try {
-      setAnswer(await ask(question.trim()));
+      setAnswer(await (ask ?? askCoach)(question.trim(), locale));
     } catch (e) {
-      setError(messageFor(e instanceof ApiError ? e.code : null));
+      setError(msg(e instanceof ApiError ? e.code : null));
     } finally {
       setBusy(false);
     }
@@ -29,23 +30,23 @@ export function AskCoach({ ask = askCoach }: { ask?: (q: string) => Promise<AskR
 
   return (
     <View style={coachStyles.card} testID="ask-coach">
-      <Text style={coachStyles.cardTitle}>Ask the coach</Text>
+      <Text style={coachStyles.cardTitle}>{t('ask.title')}</Text>
       <Field
-        label="Your question"
+        label={t('ask.label')}
         value={question}
         onChangeText={setQuestion}
-        placeholder="How can I spend less on food?"
+        placeholder={t('ask.placeholder')}
         maxLength={300}
         testID="ask-input"
       />
-      <Button title="Ask" onPress={submit} busy={busy} disabled={!question.trim()} testID="ask-submit" />
+      <Button title={t('ask.submit')} onPress={submit} busy={busy} disabled={!question.trim()} testID="ask-submit" />
       <ErrorBanner message={error} />
       {answer && (
         <View style={styles.answer} testID="ask-answer" accessibilityLiveRegion="polite">
           <Text style={coachStyles.body}>{answer.answer}</Text>
         </View>
       )}
-      <Text style={coachStyles.muted}>General guidance only, not financial, investment or loan advice.</Text>
+      <Text style={coachStyles.muted}>{t('ask.disclaimer')}</Text>
     </View>
   );
 }

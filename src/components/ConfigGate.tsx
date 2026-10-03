@@ -1,14 +1,16 @@
 import { useMemo, type ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { useI18n } from '@/i18n/LocaleProvider';
 import { ConfigError, readConfig } from '@/lib/config';
 
-import { colors } from './ui';
+import { colors, Text } from './ui';
 
 type Env = Parameters<typeof readConfig>[0];
 
 /** TC-P1-SETUP-04: render a clear configuration error instead of crashing. */
 export function ConfigGate({ children, env }: { children: ReactNode; env?: Env }) {
+  const { t } = useI18n();
   const error = useMemo(() => {
     try {
       readConfig(env);
@@ -22,14 +24,14 @@ export function ConfigGate({ children, env }: { children: ReactNode; env?: Env }
   if (!error) return <>{children}</>;
   return (
     <View style={styles.container} accessibilityRole="alert" testID="config-error">
-      <Text style={styles.title}>Configuration error</Text>
-      <Text style={styles.body}>The app is missing required settings and cannot start.</Text>
+      <Text style={styles.title}>{t('config.title')}</Text>
+      <Text style={styles.body}>{t('config.body')}</Text>
       {error.missing.map((name) => (
         <Text key={name} style={styles.code}>
           {name}
         </Text>
       ))}
-      <Text style={styles.body}>Copy .env.example to .env, fill in the values, and restart the bundler.</Text>
+      <Text style={styles.body}>{t('config.fix')}</Text>
     </View>
   );
 }

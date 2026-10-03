@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { formatTaka } from '@/lib/format';
-import { messageFor } from '@/lib/messages';
+import { useI18n } from '@/i18n/LocaleProvider';
 import { isValidPin } from '@/lib/validation';
 
-import { Button, colors, ErrorBanner, Field } from './ui';
+import { Button, colors, ErrorBanner, Field, Text } from './ui';
 
 export interface StepUpConfirmProps {
   merchantName: string;
   amount: number;
+  /** Cash-outs and transfers pass their own sentence and button label. */
+  body?: string;
+  confirmLabel?: string;
   busy: boolean;
   serverError: string | null;
   onConfirm: (pin: string) => void;
@@ -20,12 +22,13 @@ export interface StepUpConfirmProps {
  * TC-P2-FLOW-03: a medium-risk payment runs only after the user confirms it
  * again with their PIN. The wording is neutral and never says why.
  */
-export function StepUpConfirm({ merchantName, amount, busy, serverError, onConfirm, onCancel }: StepUpConfirmProps) {
+export function StepUpConfirm({ merchantName, amount, body, confirmLabel, busy, serverError, onConfirm, onCancel }: StepUpConfirmProps) {
+  const { t, msg, money } = useI18n();
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const confirm = () => {
-    if (!isValidPin(pin)) return setError(messageFor('INVALID_PIN_FORMAT'));
+    if (!isValidPin(pin)) return setError(msg('INVALID_PIN_FORMAT'));
     setError(null);
     onConfirm(pin);
   };
@@ -34,18 +37,15 @@ export function StepUpConfirm({ merchantName, amount, busy, serverError, onConfi
     <View style={styles.container} testID="step-up">
       <View style={styles.card}>
         <Text style={styles.heading} accessibilityRole="header">
-          Confirm this payment
+          {t('stepUp.title')}
         </Text>
-        <Text style={styles.text}>
-          For your security, please confirm you want to pay{' '}
-          <Text style={styles.strong} testID="step-up-amount">
-            {formatTaka(amount)}
-          </Text>{' '}
-          to <Text style={styles.strong}>{merchantName}</Text>.
+        <Text style={styles.text}>{body ?? t('stepUp.body', { amount: money(amount), name: merchantName })}</Text>
+        <Text style={[styles.text, styles.strong]} testID="step-up-amount">
+          {money(amount)}
         </Text>
       </View>
       <Field
-        label="PIN"
+        label={t('common.pin')}
         testID="step-up-pin"
         value={pin}
         onChangeText={(t) => setPin(t.replace(/\D/g, ''))}
@@ -56,8 +56,8 @@ export function StepUpConfirm({ merchantName, amount, busy, serverError, onConfi
         placeholder="••••"
       />
       <ErrorBanner message={error ?? serverError} />
-      <Button title="Confirm and pay" onPress={confirm} busy={busy} testID="step-up-confirm" />
-      <Button title="Cancel" variant="secondary" onPress={onCancel} disabled={busy} testID="step-up-cancel" />
+      <Button title={confirmLabel ?? t('stepUp.confirm')} onPress={confirm} busy={busy} testID="step-up-confirm" />
+      <Button title={t('common.cancel')} variant="secondary" onPress={onCancel} disabled={busy} testID="step-up-cancel" />
     </View>
   );
 }

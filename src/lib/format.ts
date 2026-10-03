@@ -1,28 +1,26 @@
+import { formatDateTime as localDateTime, formatMoney, translate, type LocaleOptions } from '@/i18n/translate';
+
 import type { TransactionRow } from './api';
 
-/** ৳ with South Asian digit grouping, e.g. 125000 -> ৳1,25,000.00 */
-export function formatTaka(amount: number): string {
-  const negative = amount < 0;
-  const [whole, fraction] = Math.abs(amount).toFixed(2).split('.');
-  const lastThree = whole.slice(-3);
-  const rest = whole.slice(0, -3);
-  const grouped = rest ? `${rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',')},${lastThree}` : lastThree;
-  return `${negative ? '-' : ''}৳${grouped}.${fraction}`;
+const EN: LocaleOptions = { locale: 'en', banglaDigits: false };
+
+/** ৳ with South Asian digit grouping, e.g. 125000 -> ৳1,25,000.00 (English digits; see useI18n().money). */
+export function formatTaka(amount: number, opts: LocaleOptions = EN): string {
+  return formatMoney(amount, opts);
 }
 
-export function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+export function formatDateTime(iso: string, opts: LocaleOptions = EN): string {
+  return localDateTime(iso, opts);
 }
 
-export function receiptText(t: TransactionRow): string {
+export function receiptText(t: TransactionRow, opts: LocaleOptions = EN): string {
+  const tr = (key: Parameters<typeof translate>[1]) => translate(opts.locale, key, {}, opts.banglaDigits);
   return [
-    'Shongrokhon payment receipt',
-    `Transaction ID: ${t.id}`,
-    `Amount: ${formatTaka(Number(t.amount))}`,
-    `${t.direction === 'OUT' ? 'Paid to' : 'Received from'}: ${t.counterparty_name ?? '—'}${t.counterparty_ref ? ` (${t.counterparty_ref})` : ''}`,
-    `Date: ${formatDateTime(t.created_at)}`,
-    `Status: ${t.status}`,
+    tr('receipt.text.title'),
+    `${tr('receipt.id')}: ${t.id}`,
+    `${tr('receipt.text.amount')}: ${formatTaka(Number(t.amount), opts)}`,
+    `${tr(t.direction === 'OUT' ? 'receipt.paidTo' : 'receipt.receivedFrom')}: ${t.counterparty_name ?? '—'}${t.counterparty_ref ? ` (${t.counterparty_ref})` : ''}`,
+    `${tr('receipt.text.date')}: ${formatDateTime(t.created_at, opts)}`,
+    `${tr('receipt.text.status')}: ${tr(`status.${t.status}` as never)}`,
   ].join('\n');
 }

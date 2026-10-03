@@ -1,41 +1,31 @@
 // AI coach dashboard pieces (TC-P3-COACH-*). Charts are plain Views: one hue
 // for magnitude, every bar labelled with text, and an accessibilityLabel that
 // reads the whole chart as text (TC-P3-COACH-08).
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import type { CoachDashboard, CoachPeriod, Insight, SpendCategory } from '@/lib/api';
-import { formatTaka } from '@/lib/format';
+import { useI18n } from '@/i18n/LocaleProvider';
+import type { CoachDashboard, CoachPeriod, Insight } from '@/lib/api';
 
-import { Button, colors } from './ui';
+import { Button, colors, Text } from './ui';
 
-export const CATEGORY_LABELS: Record<SpendCategory, string> = {
-  FOOD: 'Food', TRANSPORT: 'Transport', UTILITIES: 'Utilities', BILLS: 'Bills & rent', SHOPPING: 'Shopping',
-  HEALTH: 'Health', EDUCATION: 'Education', SAVINGS: 'Savings', CASH_OUT: 'Cash-out', OTHERS: 'Others',
-};
-
-const PERIODS: { value: CoachPeriod; label: string }[] = [
-  { value: 'WEEK', label: '7 days' },
-  { value: 'MONTH', label: '30 days' },
-  { value: '3M', label: '3 months' },
-];
-
-const pct = (share: number) => `${Math.round(share * 100)}%`;
+const PERIODS: CoachPeriod[] = ['WEEK', 'MONTH', '3M'];
 
 export function PeriodFilter({ value, onChange }: { value: CoachPeriod; onChange: (p: CoachPeriod) => void }) {
+  const { t } = useI18n();
   return (
     <View style={styles.segment} accessibilityRole="tablist">
       {PERIODS.map((p) => {
-        const selected = p.value === value;
+        const selected = p === value;
         return (
           <Pressable
-            key={p.value}
-            testID={`period-${p.value}`}
+            key={p}
+            testID={`period-${p}`}
             accessibilityRole="tab"
             accessibilityState={{ selected }}
             aria-selected={selected} // react-native-web does not map accessibilityState.selected
-            onPress={() => onChange(p.value)}
+            onPress={() => onChange(p)}
             style={[styles.segmentItem, selected && styles.segmentSelected]}>
-            <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>{p.label}</Text>
+            <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>{t(`coach.period.${p}`)}</Text>
           </Pressable>
         );
       })}
@@ -44,11 +34,12 @@ export function PeriodFilter({ value, onChange }: { value: CoachPeriod; onChange
 }
 
 export function SummaryRow({ dashboard }: { dashboard: CoachDashboard }) {
+  const { t, money } = useI18n();
   return (
     <View style={styles.summary} testID="coach-summary">
-      <Stat label="Money in" value={formatTaka(dashboard.income)} testID="coach-income" />
-      <Stat label="Spent" value={formatTaka(dashboard.spending)} testID="coach-spending" />
-      <Stat label="Saved" value={formatTaka(dashboard.saved)} testID="coach-saved" />
+      <Stat label={t('coach.moneyIn')} value={money(dashboard.income)} testID="coach-income" />
+      <Stat label={t('coach.spent')} value={money(dashboard.spending)} testID="coach-spending" />
+      <Stat label={t('coach.saved')} value={money(dashboard.saved)} testID="coach-saved" />
     </View>
   );
 }
@@ -64,19 +55,20 @@ function Stat({ label, value, testID }: { label: string; value: string; testID: 
 
 /** Spending by category, largest first (TC-P3-COACH-01/02). */
 export function CategoryBreakdown({ categories }: { categories: CoachDashboard['categories'] }) {
+  const { t, money, percent } = useI18n();
   const max = Math.max(...categories.map((c) => c.total), 1);
   const description = categories
-    .map((c) => `${CATEGORY_LABELS[c.category]} ${formatTaka(c.total)}, ${pct(c.share)}`)
+    .map((c) => `${t(`category.${c.category}`)} ${money(c.total)}, ${percent(c.share)}`)
     .join('; ');
   return (
-    <View style={styles.card} testID="category-breakdown" accessible accessibilityLabel={`Spending by category: ${description}`}>
-      <Text style={styles.cardTitle}>Where your money went</Text>
+    <View style={styles.card} testID="category-breakdown" accessible accessibilityLabel={t('coach.whereA11y', { list: description })}>
+      <Text style={styles.cardTitle}>{t('coach.whereTitle')}</Text>
       {categories.map((c) => (
         <View key={c.category} style={styles.barRow} testID={`category-${c.category}`}>
           <View style={styles.barLabels}>
-            <Text style={styles.barName}>{CATEGORY_LABELS[c.category]}</Text>
+            <Text style={styles.barName}>{t(`category.${c.category}`)}</Text>
             <Text style={styles.barValue}>
-              {formatTaka(c.total)} · {pct(c.share)}
+              {money(c.total)} · {percent(c.share)}
             </Text>
           </View>
           <View style={styles.track}>
@@ -88,41 +80,34 @@ export function CategoryBreakdown({ categories }: { categories: CoachDashboard['
   );
 }
 
-const LEVEL_TEXT = {
-  LOW: { label: 'Low', explain: 'Most of your spending is digital. Keep paying by QR.' },
-  MEDIUM: { label: 'Medium', explain: 'A fair share of your money leaves as cash. Paying shops by QR saves cash-out fees.' },
-  HIGH: {
-    label: 'High',
-    explain: 'Most of your money leaves your wallet as cash. Each cash-out costs a fee; paying shops directly by QR avoids it and shows you where the money goes.',
-  },
-} as const;
-
 /** Cash-out share with a plain-language explanation (TC-P3-COACH-03). */
 export function CashDependencyCard({ cashout }: { cashout: CoachDashboard['cashout'] }) {
-  const level = LEVEL_TEXT[cashout.level];
+  const { t, money, percent } = useI18n();
+  const level = { label: t(`coach.level.${cashout.level}`), explain: t(`coach.explain.${cashout.level}`) };
   const high = cashout.level !== 'LOW';
   return (
     <View
       style={[styles.card, high && styles.cardWarning]}
       testID="cash-dependency"
       accessible
-      accessibilityLabel={`Cash dependency ${level.label}: cash-outs are ${pct(cashout.share)} of your spending, ${cashout.count} cash-outs, ${formatTaka(cashout.total)}. ${level.explain}`}>
+      accessibilityLabel={t('coach.cashA11y', { level: level.label, share: percent(cashout.share), count: cashout.count,
+                                                amount: money(cashout.total), explain: level.explain })}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>Cash dependency</Text>
+        <Text style={styles.cardTitle}>{t('coach.cashTitle')}</Text>
         <Text style={[styles.badge, high && styles.badgeWarning]} testID="cash-level">
           {high ? '⚠ ' : ''}
           {level.label}
         </Text>
       </View>
       <Text style={styles.big} testID="cash-share">
-        {pct(cashout.share)}
-        <Text style={styles.bigSuffix}> of spending was cash-out</Text>
+        {percent(cashout.share)}
+        <Text style={styles.bigSuffix}>{t('coach.cashShare')}</Text>
       </Text>
       <View style={styles.track}>
         <View style={[styles.bar, high && { backgroundColor: colors.warning }, { width: `${Math.min(cashout.share * 100, 100)}%` }]} />
       </View>
       <Text style={styles.muted}>
-        {cashout.count} cash-out{cashout.count === 1 ? '' : 's'}, {formatTaka(cashout.total)}
+        {t('coach.cashCount', { count: cashout.count, amount: money(cashout.total) })}
       </Text>
       <Text style={styles.body}>{level.explain}</Text>
     </View>
@@ -144,8 +129,9 @@ export function InsightCards({ insights }: { insights: Insight[] }) {
 
 /** Placeholder blocks while data loads (TC-P3-COACH-06). */
 export function Skeleton({ lines = 3, testID = 'skeleton' }: { lines?: number; testID?: string }) {
+  const { t } = useI18n();
   return (
-    <View style={[styles.card, { gap: 10 }]} testID={testID} accessibilityLabel="Loading" accessibilityRole="progressbar">
+    <View style={[styles.card, { gap: 10 }]} testID={testID} accessibilityLabel={t('common.loading')} accessibilityRole="progressbar">
       {Array.from({ length: lines }, (_, i) => (
         <View key={i} style={[styles.skeletonLine, { width: `${90 - i * 20}%` }]} />
       ))}
@@ -154,10 +140,11 @@ export function Skeleton({ lines = 3, testID = 'skeleton' }: { lines?: number; t
 }
 
 export function RetryCard({ message, onRetry, testID }: { message: string; onRetry: () => void; testID: string }) {
+  const { t } = useI18n();
   return (
     <View style={[styles.card, { gap: 12 }]} testID={testID} accessibilityRole="alert">
       <Text style={styles.body}>{message}</Text>
-      <Button title="Try again" variant="secondary" onPress={onRetry} testID={`${testID}-retry`} />
+      <Button title={t('common.tryAgain')} variant="secondary" onPress={onRetry} testID={`${testID}-retry`} />
     </View>
   );
 }

@@ -35,7 +35,7 @@ test('TC-P1-PAY-01: U-NORMAL pays M-LEGIT ৳500 from an uploaded static QR (QR-
   const rows = page.getByTestId('txn-row');
   await expect(rows.first()).toContainText('Rahim Store');
   await expect(rows.first()).toContainText('−৳500.00');
-  await expect(rows.first()).toContainText('SUCCESS');
+  await expect(rows.first()).toContainText('Successful'); // status label, localized since Phase 4
   expect(await balanceOf(PHONES.normal)).toBe(4500);
 });
 

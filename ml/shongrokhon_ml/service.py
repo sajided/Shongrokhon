@@ -64,6 +64,21 @@ class ScoreRequest(BaseModel):
     merchant_age_days: Optional[Num] = None
 
 
+class ExplainRequest(ScoreRequest):
+    """The stored features of a past score plus the model version that produced it."""
+
+    model_version: str = Field(max_length=64)
+
+
+class ExplainResponse(BaseModel):
+    model_version: str
+    risk_score: float
+    margin: float
+    base_value: float
+    contributions: dict[str, float]
+    features: dict[str, float]
+
+
 class ScoreResponse(BaseModel):
     risk_score: float
     anomaly_score: float
@@ -134,3 +149,17 @@ async def score(req: ScoreRequest) -> ScoreResponse:
              (time.perf_counter() - started) * 1000)
     return ScoreResponse(risk_score=s.risk_score, anomaly_score=s.anomaly_score, low_confidence=s.low_confidence,
                          decision=s.decision, model_version=model.version)
+
+
+# TC-P4-INV-03/04: SHAP explanation of a stored score, for the investigation
+# assistant. 409 when the score came from another model version: explaining it
+# with this model would be wrong.
+@app.post("/explain", response_model=ExplainResponse, dependencies=[Depends(require_token)])
+async def explain(req: ExplainRequest) -> ExplainResponse:
+    model: RiskModel = state["model"]
+    if req.model_version != model.version:
+        raise HTTPException(status_code=409, detail="MODEL_VERSION_MISMATCH")
+    e = model.explain(req.model_dump(exclude={"request_id", "model_version"}))
+    log.info("explain request_id=%s", req.request_id or "-")
+    return ExplainResponse(model_version=model.version, risk_score=e.risk_score, margin=e.margin, base_value=e.base_value,
+                           contributions=e.contributions, features=e.features)

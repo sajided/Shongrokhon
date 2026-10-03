@@ -1,6 +1,6 @@
 // TC-P3-LLM-04 (grounded numbers) and TC-P3-MW-03 (PII scrubbing), pure parts.
 import { buildFacts, ground, numbersIn, percent, taka } from './grounding';
-import { scrubPII } from './sanitize';
+import { scrubPII } from '../_shared/llm/sanitize';
 import type { Summary } from './types';
 
 const SUMMARY: Summary = {

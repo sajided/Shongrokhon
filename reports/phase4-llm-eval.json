@@ -1,0 +1,345 @@
+{
+  "model": "claude-sonnet-5-5",
+  "run_at": "2026-10-03T07:17:03.660Z",
+  "l10n06": {
+    "U-CASHHEAVY": {
+      "bangla": [
+        {
+          "kind": "CASH",
+          "title": "বেশিরভাগ খরচই ক্যাশ আউটে",
+          "body": "গত ৩০ দিনে আপনি ১২ বার ক্যাশ আউট করেছেন, মোট ৳১৫,৫০০। এটা আপনার খরচের ৯০%। যেখানে সম্ভব, দোকানে QR দিয়ে সরাসরি পেমেন্ট করে দেখতে পারেন। এতে হিসাব রাখা সহজ হবে।"
+        },
+        {
+          "kind": "SPENDING",
+          "title": "খাবারে আপনার খরচ",
+          "body": "গত ৩০ দিনে খাবার বাবদ আপনি ৳১,৬৫০ খরচ করেছেন, মোট ৫ বার। এটা খরচের ১০%। খাবারের পেমেন্ট QR দিয়ে করলে খরচের হিসাব আলাদা করে দেখা যাবে।"
+        },
+        {
+          "kind": "SAVING",
+          "title": "হাতে কিছু থাকছে, এবার জমানো শুরু করুন",
+          "body": "গত ৩০ দিনে আপনার আয় ছিল ৳১৮,০০০ আর খরচ ৳১৭,১৫০। হাতে থেকেছে ৳৮৫০, কিন্তু জমানো হয়েছে ৳০। আয় আসার পর ছোট একটা অংশ আলাদা করে রাখলে শুরুটা সহজ হবে।"
+        },
+        {
+          "kind": "TIP",
+          "title": "এক ধাপ থেকে শুরু করুন",
+          "body": "পরেরবার ক্যাশ আউটের আগে একবার ভাবুন, কাজটা QR পেমেন্টে হয় কি না। প্রতি সপ্তাহে একটা ক্যাশ আউট কমালেও ৳১৫,৫০০-এর হিসাবটা ধীরে ধীরে হালকা হবে।"
+        }
+      ],
+      "english": [
+        {
+          "kind": "SPENDING",
+          "title": "Where your money went",
+          "body": "In the last 30 days, you spent ৳17,150 out of ৳18,000 coming in. Most of it went to cash-out, with ৳1,650 on food. Good news: you still ended with ৳850 left over."
+        },
+        {
+          "kind": "CASH",
+          "title": "Cash-outs are most of your spending",
+          "body": "You made 12 cash-outs totalling ৳15,500, which is 90% of your spending. Next time, try paying a shop or food place directly by QR instead of cashing out first."
+        },
+        {
+          "kind": "SAVING",
+          "title": "A small start on saving",
+          "body": "You have ৳0 set aside so far, but you finished with ৳850 unspent. Moving a small part of that into savings as soon as income arrives is an easy first step."
+        },
+        {
+          "kind": "TIP",
+          "title": "Try one QR payment this week",
+          "body": "You spent ৳1,650 on food across 5 payments. Paying for your next meal by QR keeps money in your wallet and makes your spending easier to see."
+        }
+      ],
+      "judge": {
+        "pass": true,
+        "score": 4,
+        "reason": "The tone is friendly, supportive and non-judgemental, with gentle suggestions and no blame. The Bangla is mostly colloquial and natural (চলিত ভাষা), with common app terms like ক্যাশ আউট, QR and পেমেন্ট. Minor stiffness: \"খাবার বাবদ\" and \"হিসাবটা ধীরে ধীরে হালকা হবে\" sound slightly odd, since a cash-out total doesn't get \"lighter\". \"Cash out 90% of spending\" is a bit literal, and \"পরেরবার\" would be better as \"পরের বার\". Overall it is natural enough to pass."
+      },
+      "bangla_share": 0.98,
+      "figures": {
+        "bn": [
+          "0",
+          "1,650",
+          "10",
+          "12",
+          "15,500",
+          "15,500",
+          "17,150",
+          "18,000",
+          "30",
+          "30",
+          "30",
+          "5",
+          "850",
+          "90"
+        ],
+        "en": [
+          "0",
+          "1,650",
+          "1,650",
+          "12",
+          "15,500",
+          "17,150",
+          "18,000",
+          "30",
+          "5",
+          "850",
+          "850",
+          "90"
+        ]
+      }
+    },
+    "U-NORMAL": {
+      "bangla": [
+        {
+          "kind": "SPENDING",
+          "title": "বিল আর খাবারেই বেশি খরচ",
+          "body": "গত ৩০ দিনে আপনার মোট খরচ হয়েছে ৳১৯,৪৮০। এর মধ্যে বিল ও বাসাভাড়া খাতে গেছে ৳৮,২৫০ (৪২%), আর খাবার খাতে ৳৭,৬০০ (৩৯%)।"
+        },
+        {
+          "kind": "SAVING",
+          "title": "সঞ্চয়ের অভ্যাসটা দারুণ চলছে",
+          "body": "গত ৩০ দিনে আপনি ৳৮,৫২০ জমিয়েছেন, আর আয় থেকে খরচ বাদ দিলেও ৳১৩,৫২০ হাতে আছে। এভাবেই চালিয়ে যান, দেখবেন জমানো টাকা ধীরে ধীরে বাড়বে।"
+        },
+        {
+          "kind": "CASH",
+          "title": "ক্যাশ আউট ছাড়াই চলছেন",
+          "body": "গত ৩০ দিনে আপনি ক্যাশ আউট করেননি, যা বেশ ভালো অভ্যাস। দোকানে QR দিয়ে সরাসরি পেমেন্ট করে এই ধারাটা ধরে রাখতে পারেন।"
+        },
+        {
+          "kind": "TIP",
+          "title": "খাবারের খরচে একটু নজর দিন",
+          "body": "খাবার খাতে ২৮বার লেনদেন হয়েছে। চাইলে সপ্তাহে একটা ছোট সীমা ঠিক করে নিন, এতে খরচ আরও গোছানো থাকবে।"
+        }
+      ],
+      "english": [
+        {
+          "kind": "SPENDING",
+          "title": "Where your money went",
+          "body": "In the last 30 days you spent ৳19,480 in total. Most of it went to bills & rent at ৳8,250, then food at ৳7,600. That is a clear and steady picture."
+        },
+        {
+          "kind": "SAVING",
+          "title": "Nice work staying in the green",
+          "body": "You brought in ৳33,000 and kept ৳13,520 after spending in the last 30 days. You also set aside ৳8,520. Saving regularly like this builds a calm cushion for the unexpected."
+        },
+        {
+          "kind": "CASH",
+          "title": "You are keeping cash-outs low",
+          "body": "You cashed out ৳0 in the last 30 days, so your money mostly stays digital. That makes it easier to track. When you can, keep paying merchants directly by QR."
+        },
+        {
+          "kind": "TIP",
+          "title": "One small step for food spending",
+          "body": "You made 28 food payments in the last 30 days. Try picking one weekly food budget and check it each Friday. It is a simple way to see your habits."
+        }
+      ],
+      "judge": {
+        "pass": true,
+        "score": 4,
+        "reason": "The Bangla is natural and conversational, using colloquial phrasing like \"দারুণ চলছে\", \"হাতে আছে\", and \"চালিয়ে যান\". The tone is supportive and non-judgemental, with gentle suggestions such as \"চাইলে\" and \"একটু নজর দিন\". Minor issues: \"২৮বার\" should be written as \"২৮ বার\", \"ক্যাশ আউট ছাড়াই চলছেন\" is slightly stiff, and \"ধারাটা ধরে রাখতে\" and \"গোছানো\" lean slightly bookish. Overall it reads like a friendly app."
+      },
+      "bangla_share": 0.99,
+      "figures": {
+        "bn": [
+          "13,520",
+          "19,480",
+          "28",
+          "30",
+          "30",
+          "30",
+          "39",
+          "42",
+          "7,600",
+          "8,250",
+          "8,520"
+        ],
+        "en": [
+          "0",
+          "13,520",
+          "19,480",
+          "28",
+          "30",
+          "30",
+          "30",
+          "30",
+          "33,000",
+          "7,600",
+          "8,250",
+          "8,520"
+        ]
+      }
+    },
+    "U-TIGHT": {
+      "bangla": [
+        {
+          "kind": "SPENDING",
+          "title": "বিলেই বেশিরভাগ খরচ",
+          "body": "গত ৩০ দিনে আপনার মোট খরচ হয়েছে ৳১১,৯৫০। এর মধ্যে বিল ও বাসাভাড়া খাতে গেছে ৳৯,৫০০, মানে খরচের ৮০%। এটা নিয়মিত খরচ, তাই মাসের শুরুতেই আলাদা করে রাখলে হিসাব সহজ হবে।"
+        },
+        {
+          "kind": "SPENDING",
+          "title": "খাবারের খরচ হাতের মধ্যে",
+          "body": "খাবার খাতে আপনি ১৮ বার খরচ করেছেন, মোট ৳২,৪৫০। এর মধ্যে একটি খাবারের দোকানেই ৫ বারে গেছে ৳১,৬৫০। পছন্দের জায়গা থাকলে এমনটা হতেই পারে।"
+        },
+        {
+          "kind": "SAVING",
+          "title": "চমৎকার, সঞ্চয় হচ্ছে",
+          "body": "গত ৩০ দিনে আপনার আয় ছিল ৳১৫,০০০, আর হাতে থেকেছে ৳৩,০৫০। খরচ আয়ের মধ্যেই রেখেছেন, এটা দারুণ অভ্যাস। এই টাকার একটা অংশ প্রতি মাসে আলাদা করে রাখার চেষ্টা করতে পারেন।"
+        },
+        {
+          "kind": "TIP",
+          "title": "ক্যাশ আউট ছাড়াই চালাচ্ছেন",
+          "body": "গত ৩০ দিনে আপনি ক্যাশ আউট করেননি, মানে ক্যাশ আউটের হার ০%। ডিজিটাল পেমেন্টেই কাজ চালিয়ে যাচ্ছেন, এভাবেই চালিয়ে যান। দোকানে QR দিয়ে পেমেন্ট করলে খরচের হিসাবও অ্যাপে থাকবে।"
+        }
+      ],
+      "english": [
+        {
+          "kind": "SPENDING",
+          "title": "Bills & rent are your biggest expense",
+          "body": "In the last 30 days, you spent ৳9,500 on bills & rent, which is 80% of your spending. That is a fixed cost, so it is normal for it to be the largest part of your budget."
+        },
+        {
+          "kind": "SPENDING",
+          "title": "Your everyday food spending",
+          "body": "You spent ৳2,450 on food across 18 payments in the last 30 days. Small, regular payments like these add up, so it helps to know where they go."
+        },
+        {
+          "kind": "SAVING",
+          "title": "Nice work keeping money aside",
+          "body": "You brought in ৳15,000 and spent ৳11,950 in the last 30 days, so you were able to save ৳3,050. Keep going. Try moving some of it to a separate savings spot as soon as you are paid."
+        },
+        {
+          "kind": "TIP",
+          "title": "Keep paying digitally",
+          "body": "You had no cash-outs in the last 30 days, and that is a great habit. Paying merchants directly by QR keeps your spending easy to track and your money safe."
+        }
+      ],
+      "judge": {
+        "pass": true,
+        "score": 4,
+        "reason": "The Bangla is mostly natural, colloquial and friendly (e.g. \"হাতের মধ্যে\", \"হিসাব সহজ হবে\", \"পছন্দের জায়গা থাকলে এমনটা হতেই পারে\"). The tone is supportive and non-judgemental, with no shaming over the food spending. Minor stiffness remains in a few phrases such as \"মানে ক্যাশ আউটের হার ০%\" and the repeated \"চালিয়ে যাচ্ছেন... চালিয়ে যান\". \"বিলেই বেশিরভাগ খরচ\" is slightly headline-like but acceptable. Overall it reads as natural Bangladeshi app copy."
+      },
+      "bangla_share": 0.99,
+      "figures": {
+        "bn": [
+          "0",
+          "1,650",
+          "11,950",
+          "15,000",
+          "18",
+          "2,450",
+          "3,050",
+          "30",
+          "30",
+          "30",
+          "5",
+          "80",
+          "9,500"
+        ],
+        "en": [
+          "11,950",
+          "15,000",
+          "18",
+          "2,450",
+          "3,050",
+          "30",
+          "30",
+          "30",
+          "30",
+          "80",
+          "9,500"
+        ]
+      }
+    }
+  },
+  "l10n07": [
+    {
+      "q": "amar khoroch komabo kivabe?",
+      "topic": "GENERAL",
+      "answer": "গত ৩০ দিনে আপনি মোট ৳১৭,১৫০ খরচ করেছেন, যার বড় অংশই ক্যাশ আউট, মানে ৳১৫,৫০০। খরচ কমাতে হাতে ক্যাশ তোলার বদলে যেখানে পারেন QR দিয়ে সরাসরি পেমেন্ট করুন, তাহলে টাকা কোথায় যাচ্ছে সহজে দেখতে পারবেন। খাবারে ৳১,৬৫০ গেছে, তাই সপ্তাহের বাজার আর খাবারের একটা ছোট পরিকল্পনা করে নিলে সেখানেও কিছু বাঁচবে। আর মাসের শুরুতেই একটা ছোট অঙ্ক আলাদা করে সঞ্চয়ে রেখে দিন।",
+      "bangla": true,
+      "judge": {
+        "pass": true,
+        "score": 9,
+        "reason": "The answer is written in Bangla and understands the question about reducing expenses. It gives practical advice: pay by QR instead of withdrawing cash, plan weekly groceries and meals, and set aside savings at the start of the month. It also refers to specific spending figures (৳১৭,১৫০ total, ৳১৫,৫০০ cash out, ৳১,৬৫০ on food). The figures are plausible given the context of a user's transaction data, though they can't be verified here."
+      }
+    },
+    {
+      "q": "ami ki mashe 5000 taka jomate parbo?",
+      "topic": "GENERAL",
+      "answer": "গত ৩০ দিনে আপনার আয় ছিল ৳১৮,০০০, খরচ ৳১৭,১৫০, আর হাতে বেঁচেছে ৳৮৫০। তাই মাসে 5000 টাকা জমাতে হলে খরচ কিছুটা কমাতে হবে, বিশেষ করে ক্যাশ আউট, যা এখন ৳১৫,৫০০। বেতন পাওয়ার পরই 5000 টাকা আলাদা করে সরিয়ে রাখুন, তারপর বাকি টাকা থেকে খরচ চালান। দোকানে সরাসরি QR দিয়ে পেমেন্ট করলে বারবার ক্যাশ আউটের দরকার কমবে, আর খরচও নজরে থাকবে।",
+      "bangla": true,
+      "judge": {
+        "pass": true,
+        "score": 9,
+        "reason": "The answer understands the question (can I save 5000 taka per month?) and responds helpfully. It uses the user's income, expenses, and leftover to show that 5000 isn't possible now without cutting about ৳4,150 in spending. It points to cash out as the main area to cut and gives actionable tips: set aside the 5000 right after salary, and pay by QR to reduce cash outs. It is written in Bangla, with only minor use of the numeral '5000' and the term 'QR', which is fine. It could have stated the exact gap, but it still answers well."
+      }
+    },
+    {
+      "q": "কিভাবে খাবারের খরচ কমাব?",
+      "topic": "GENERAL",
+      "answer": "গত ৩০ দিনে খাবারে আপনার খরচ হয়েছে ৳১,৬৫০, মানে মোট খরচের ১০%। সপ্তাহের শুরুতে একটা সহজ মেনু ঠিক করে নিন, তাহলে বাইরে থেকে কেনা কমবে। চাল, ডাল, তেলের মতো নিত্যপ্রয়োজনীয় জিনিস একসাথে বেশি করে কিনলে আর কয়েকটা দোকানের দাম মিলিয়ে নিলে সাশ্রয় হয়। আর ক্যাশ আউটের বদলে দোকানে সরাসরি QR দিয়ে পেমেন্ট করলে খরচের হিসাবও রাখা সহজ হবে।",
+      "bangla": true,
+      "judge": {
+        "pass": true,
+        "score": 82,
+        "reason": "The response is in Bangla and addresses how to reduce food costs with practical tips: weekly menu planning, bulk buying staples, comparing prices across shops, and tracking spending via QR payments. It also cites a personalized spending figure, which fits a finance-app context. Weaknesses: the QR payment tip is only loosely related to cutting costs, and it omits other common advice like reducing food waste or cooking at home. Overall it understands the question and is helpful."
+      }
+    },
+    {
+      "q": "cash out kom korbo kivabe?",
+      "topic": "GENERAL",
+      "answer": "গত ৩০ দিনে আপনি ১২ বার ক্যাশ আউট করেছেন, মোট ৳১৫,৫০০, যা খরচের ৯০%। ক্যাশ আউট কমাতে চাইলে দোকানে বা বিলে সরাসরি QR দিয়ে পেমেন্ট করার চেষ্টা করুন। আর একবারে বেশি টাকা তুলে রাখার বদলে সপ্তাহের একটা বাজেট ঠিক করে নিলে অল্প অল্প করে বারবার তুলতে হবে না। এভাবে শুরু করলে খরচও ট্র্যাক করা সহজ হবে।",
+      "bangla": true,
+      "judge": {
+        "pass": true,
+        "score": 88,
+        "reason": "The response understands that the user wants to reduce cash outs and answers in Bangla. It uses the user's transaction data for context. It gives practical advice: pay by QR at shops and for bills, and set a weekly budget. It also says this makes spending easier to track. One weakness is that the weekly-budget tip is slightly contradictory, since it advises withdrawing once rather than repeatedly, which could matter if the goal is fewer cash outs. Overall it is helpful and in Bangla."
+      }
+    }
+  ],
+  "inv05": [
+    {
+      "name": "flagged payment",
+      "summary": {
+        "headline": "Payment flagged by model: merchant cash-out pattern drives risk",
+        "next_step": "Review the merchant's recent receipts and cash-out timing alongside the payer's payment history, then decide whether the flag should be escalated or cleared.",
+        "points": [
+          "The payment of ৳10,000 was flagged with a model risk score of 97%; the network risk figure is 0% and the anomaly value is 0.21.",
+          "The share of merchant's receipts cashed out in 7 days was 93%, which raised the risk and was the strongest driver.",
+          "The amount is a round thousand (yes) raised the risk, and the merchant's distinct customers in 30 days was 3, which also raised it.",
+          "The amount vs payer's usual payment was 22.2x and the minutes until the merchant cashes out was 7; both raised the risk.",
+          "The payer's payments in 90 days was 41, which lowered the risk."
+        ]
+      },
+      "judge": {
+        "pass": true,
+        "score": 95,
+        "reason": "The summary names all six drivers with the correct directions (five raise, payer's 41 payments in 90 days lowers) and reports the correct values: 97% score, ৳10,000, 0.21 anomaly, 0% network risk. It calls the 93% cash-out share the strongest driver, which matches its highest impact of 3.10. It adds no facts beyond the evidence and does not claim abuse is proven; it calls for review and says the flag may be escalated or cleared."
+      }
+    },
+    {
+      "name": "ring",
+      "summary": {
+        "headline": "Ring alert: linked payers and merchants flagged with score 91%",
+        "next_step": "Review the payment history between the payers and merchants in the ring, and check whether the supplied score has a documented source before deciding.",
+        "points": [
+          "The alert is a ring-type alert with a risk score of 91%.",
+          "The ring has 8 payers and 2 merchants linked together.",
+          "The ring has 23 payments between them, moving a total of ৳67,500.",
+          "No model decision, score source or individual risk drivers were supplied, so the evidence does not show which features raised or lowered the risk."
+        ]
+      },
+      "judge": {
+        "pass": true,
+        "score": 95,
+        "reason": "All figures (91%, 8 payers, 2 merchants, 23 payments, ৳67,500) match the evidence. The summary names no drivers, which is consistent with the empty drivers list, and it says so explicitly. It does not claim abuse is proven and recommends review instead. The remark that no model decision or score source was supplied is accurate, since the evidence includes none."
+      }
+    }
+  ],
+  "checks": {
+    "TC-P4-L10N-06 Bangla insights grounded for every persona": true,
+    "TC-P4-L10N-06 natural Bangla >= 4/5 (LLM judge; native-speaker sign-off still required)": true,
+    "TC-P4-L10N-08 Bangla insights cite only figures from the same SQL summary": true,
+    "TC-P4-L10N-07 Banglish questions understood and answered in Bangla": true,
+    "TC-P4-INV-05 evidence summaries grounded, consistent with SHAP, no invented facts": true
+  }
+}

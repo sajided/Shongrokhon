@@ -95,3 +95,45 @@ begin
   end if;
   return public.make_payment(p_merchant_id, p_amount, p_pin, p_key, p_note, v_score, p_confirm);
 end $$;
+
+-- Phase 4: an agent (cash-out point) with its own agent wallet.
+create or replace function pg_temp.mk_agent(p_phone text, p_code text, p_name text)
+returns uuid language plpgsql as $$
+declare
+  v_id uuid := pg_temp.mk_user(p_phone, 0, '12345');
+begin
+  update public.users set role = 'agent' where id = v_id;
+  insert into public.wallets (user_id, kind, agent_code, agent_name) values (v_id, 'agent', p_code, p_name);
+  return v_id;
+end $$;
+
+-- Phase 4: a server-side score for a cash-out or transfer (payee = any wallet), as `pay` would record it.
+create or replace function pg_temp.mk_flow_score(
+  p_user uuid, p_payee_wallet uuid, p_amount numeric, p_key uuid,
+  p_decision public.risk_decision default 'ALLOW', p_ttl interval default interval '5 minutes'
+) returns uuid language plpgsql security definer as $$
+declare
+  v_id uuid;
+begin
+  insert into public.risk_scores (user_id, payer_wallet_id, payee_wallet_id, amount, idempotency_key, features,
+                                  decision, source, model_version, expires_at)
+  select p_user, payer.id, p_payee_wallet, p_amount, p_key, '{}'::jsonb, p_decision, 'RULES', 'test', now() + p_ttl
+    from public.wallets payer where payer.user_id = p_user and payer.kind = 'customer'
+  on conflict (payer_wallet_id, idempotency_key) do update set decision = excluded.decision
+  returning id into v_id;
+  return v_id;
+end $$;
+
+-- Phase 4: a compliance analyst (staff account, no customer wallet) with a live session.
+create or replace function pg_temp.mk_analyst(p_email text)
+returns uuid language plpgsql as $$
+declare
+  v_id uuid := gen_random_uuid();
+begin
+  insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, created_at, updated_at)
+  values ('00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated', p_email,
+          '{"provider":"email","staff":true}', now(), now());
+  insert into auth.sessions (id, user_id, created_at, updated_at) values (v_id, v_id, now(), now());
+  insert into public.staff (user_id, email) values (v_id, p_email);
+  return v_id;
+end $$;

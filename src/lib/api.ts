@@ -105,12 +105,15 @@ export interface Profile {
   user_id: string;
   phone: string;
   full_name: string | null;
-  role: 'customer' | 'merchant';
+  role: 'customer' | 'merchant' | 'agent';
   has_pin: boolean;
   pin_locked_until: string | null;
   wallet_id: string;
   balance: number;
   currency: string;
+  language: 'en' | 'bn';
+  bangla_digits: boolean;
+  nudges_enabled: boolean;
 }
 
 export interface PaymentResponse {
@@ -129,9 +132,17 @@ export interface PaymentResponse {
   risk_decision?: 'ALLOW' | 'REVIEW' | 'FLAG' | null;
   /** The payment went through but was flagged for review (TC-P2-FLOW-02). */
   flagged?: boolean;
+  /** Phase 4 flows: CASHOUT / TRANSFER results carry the kind, fee and counterparty. */
+  kind?: 'PAYMENT' | 'CASHOUT' | 'TRANSFER';
+  fee?: number;
+  counterparty_name?: string;
+  counterparty_ref?: string;
 }
 
 export interface PaymentRequest {
+  /** PAYMENT (default, QR merchant or biller), CASHOUT at an agent, TRANSFER to another customer. */
+  kind?: 'PAYMENT' | 'CASHOUT' | 'TRANSFER';
+  /** PAYMENT: merchant id. CASHOUT: agent code. TRANSFER: recipient phone number. */
   merchantId: string;
   amount: number;
   pin: string;
@@ -143,7 +154,7 @@ export interface PaymentRequest {
 
 export interface TransactionRow {
   id: string;
-  type: 'PAYMENT' | 'TOPUP' | 'CASHOUT';
+  type: 'PAYMENT' | 'TOPUP' | 'CASHOUT' | 'TRANSFER' | 'FEE';
   status: 'PENDING' | 'SUCCESS' | 'FAILED';
   direction: 'IN' | 'OUT';
   amount: number;
@@ -173,6 +184,8 @@ export async function lookupMerchant(merchantId: string): Promise<MerchantInfo |
 // make_payment runs (TC-P2-FLOW-*). make_payment rejects calls without a score.
 export const makePayment = (req: PaymentRequest) =>
   callFunction<PaymentResponse>('pay', {
+    kind: req.kind ?? 'PAYMENT',
+    ...(req.kind === 'CASHOUT' ? { agentCode: req.merchantId } : req.kind === 'TRANSFER' ? { phone: req.merchantId } : {}),
     merchantId: req.merchantId,
     amount: req.amount,
     pin: req.pin,
@@ -269,9 +282,11 @@ export interface SavingsOverview {
 export const getCoachDashboard = (period: CoachPeriod) =>
   callRpc<CoachDashboard>('get_coach_dashboard', { p_period: period });
 
-export const getInsights = (period: CoachPeriod) => callFunction<InsightsResponse>('coach', { action: 'insights', period });
+export const getInsights = (period: CoachPeriod, lang: 'en' | 'bn' = 'en') =>
+  callFunction<InsightsResponse>('coach', { action: 'insights', period, lang });
 
-export const askCoach = (question: string) => callFunction<AskResponse>('coach', { action: 'ask', question });
+export const askCoach = (question: string, lang: 'en' | 'bn' = 'en') =>
+  callFunction<AskResponse>('coach', { action: 'ask', question, lang });
 
 export const getCashHistory = (days = 120) => callRpc<CashHistory>('get_cash_history', { p_days: days });
 
@@ -287,3 +302,61 @@ export const deleteSavingsGoal = (id: string) => callRpc<void>('delete_savings_g
 
 export const addSavingsContribution = (goalId: string, amount: number) =>
   callRpc<void>('add_savings_contribution', { p_goal_id: goalId, p_amount: amount });
+
+// ---------------------------------------------------------------------------
+// Phase 4: cash-out, send money, bill pay, Smart Spending Companion, preferences
+// ---------------------------------------------------------------------------
+
+export interface AgentInfo {
+  agent_code: string;
+  agent_name: string;
+  is_active: boolean;
+  fee_rate: number;
+}
+
+export async function lookupAgent(code: string): Promise<AgentInfo | null> {
+  const rows = await callRpc<AgentInfo[]>('lookup_agent', { p_agent_code: code });
+  return rows[0] ?? null;
+}
+
+export async function lookupRecipient(phone: string): Promise<{ display_name: string; masked_phone: string } | null> {
+  const rows = await callRpc<{ display_name: string; masked_phone: string }[]>('lookup_recipient', { p_phone: phone });
+  return rows[0] ?? null;
+}
+
+export type BillerCategory = 'RENT' | 'ELECTRICITY' | 'GAS' | 'WATER' | 'INTERNET' | 'MOBILE';
+export interface Biller {
+  merchant_id: string;
+  merchant_name: string;
+  biller_category: BillerCategory;
+}
+
+export const listBillers = () => callRpc<Biller[]>('list_billers');
+
+export type NudgeChoice = 'PAY_QR' | 'BILL_PAY' | 'SEND_MONEY' | 'CONTINUE' | 'CANCEL';
+export interface Nudge {
+  show: boolean;
+  reason?: 'OPTED_OUT' | 'BELOW_THRESHOLD' | 'CAPPED';
+  nudge_id?: string;
+  cashouts_30d?: number;
+  nth?: number;
+  fee?: number;
+  fee_rate?: number;
+  alternatives?: NudgeChoice[];
+}
+
+export const cashoutNudge = (amount: number) => callRpc<Nudge>('cashout_nudge', { p_amount: amount });
+
+export const logNudgeChoice = (nudgeId: string, choice: NudgeChoice) =>
+  callRpc<void>('log_nudge_choice', { p_nudge_id: nudgeId, p_choice: choice });
+
+export const setMyPreferences = (prefs: { language?: 'en' | 'bn'; banglaDigits?: boolean; nudgesEnabled?: boolean }) =>
+  callRpc<void>('set_my_preferences', {
+    p_language: prefs.language ?? null,
+    p_bangla_digits: prefs.banglaDigits ?? null,
+    p_nudges_enabled: prefs.nudgesEnabled ?? null,
+  });
+
+/** TC-P4-SEC-05: anonymises the account; the balance must be ৳0. */
+export const deleteMyAccount = (pin: string) =>
+  callRpc<{ status: 'DELETED' | 'FAILED'; code?: string; attempts_left?: number }>('delete_my_account', { p_pin: pin });

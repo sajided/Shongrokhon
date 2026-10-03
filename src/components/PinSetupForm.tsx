@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { messageFor } from '@/lib/messages';
+import { useI18n } from '@/i18n/LocaleProvider';
 import { isValidPin } from '@/lib/validation';
 
 import { Button, ErrorBanner, Field } from './ui';
@@ -16,13 +16,14 @@ export function PinSetupForm({
   busy: boolean;
   serverError: string | null;
 }) {
+  const { t, msg } = useI18n();
   const [pin, setPin] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const submit = () => {
-    if (!isValidPin(pin)) return setError(messageFor('INVALID_PIN_FORMAT'));
-    if (pin !== confirm) return setError(messageFor('PIN_MISMATCH'));
+    if (!isValidPin(pin)) return setError(msg('INVALID_PIN_FORMAT'));
+    if (pin !== confirm) return setError(msg('PIN_MISMATCH'));
     setError(null);
     onSubmit(pin);
   };
@@ -32,7 +33,7 @@ export function PinSetupForm({
   return (
     <View style={{ gap: 16 }}>
       <Field
-        label="New PIN (4 or 5 digits)"
+        label={t('pin.new')}
         testID="pin-new"
         value={pin}
         onChangeText={digitsOnly(setPin)}
@@ -41,7 +42,7 @@ export function PinSetupForm({
         maxLength={5}
       />
       <Field
-        label="Confirm PIN"
+        label={t('pin.confirm')}
         testID="pin-confirm"
         value={confirm}
         onChangeText={digitsOnly(setConfirm)}
@@ -50,7 +51,7 @@ export function PinSetupForm({
         maxLength={5}
       />
       <ErrorBanner message={error ?? serverError} />
-      <Button title="Save PIN" onPress={submit} busy={busy} testID="pin-save" />
+      <Button title={t('pin.save')} onPress={submit} busy={busy} testID="pin-save" />
     </View>
   );
 }

@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { formatTaka } from '@/lib/format';
-import { messageFor } from '@/lib/messages';
+import { useI18n } from '@/i18n/LocaleProvider';
 import { isValidPin, validateAmount } from '@/lib/validation';
 
-import { Button, colors, ErrorBanner, Field } from './ui';
+import { Button, colors, ErrorBanner, Field, Text } from './ui';
 
 export interface PayFormProps {
   merchantName: string;
@@ -14,36 +13,43 @@ export interface PayFormProps {
   fixedAmount: number | null;
   busy: boolean;
   serverError: string | null;
-  onSubmit: (input: { amount: number; pin: string }) => void;
+  /** Bill pay: ask for the account / customer number, sent as the payment note. */
+  askAccount?: boolean;
+  onSubmit: (input: { amount: number; pin: string; account?: string }) => void;
 }
 
-export function PayForm({ merchantName, merchantId, fixedAmount, busy, serverError, onSubmit }: PayFormProps) {
+export function PayForm({ merchantName, merchantId, fixedAmount, busy, serverError, askAccount, onSubmit }: PayFormProps) {
+  const { t, msg, money } = useI18n();
+  const [account, setAccount] = useState('');
   const [amountText, setAmountText] = useState(fixedAmount !== null ? fixedAmount.toFixed(2) : '');
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const submit = () => {
     const amount = validateAmount(amountText);
-    if (!amount.ok) return setError(messageFor(amount.code));
-    if (!isValidPin(pin)) return setError(messageFor('INVALID_PIN_FORMAT'));
+    if (!amount.ok) return setError(msg(amount.code));
+    if (!isValidPin(pin)) return setError(msg('INVALID_PIN_FORMAT'));
     setError(null);
-    onSubmit({ amount: amount.value, pin });
+    onSubmit({ amount: amount.value, pin, account: askAccount ? account.trim() || undefined : undefined });
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.merchant} testID="merchant-card">
-        <Text style={styles.merchantLabel}>Paying</Text>
+        <Text style={styles.merchantLabel}>{t('pay.paying')}</Text>
         <Text style={styles.merchantName} testID="merchant-name">
           {merchantName}
         </Text>
         <Text style={styles.merchantId} testID="merchant-id">
-          Merchant ID {merchantId}
+          {t('pay.merchantId', { id: merchantId })}
         </Text>
       </View>
+      {askAccount && (
+        <Field label={t('pay.account')} testID="account-input" value={account} onChangeText={setAccount} maxLength={40} />
+      )}
 
       <Field
-        label="Amount (৳)"
+        label={t('common.amount')}
         testID="amount-input"
         value={amountText}
         onChangeText={setAmountText}
@@ -53,11 +59,11 @@ export function PayForm({ merchantName, merchantId, fixedAmount, busy, serverErr
       />
       {fixedAmount !== null && (
         <Text style={styles.note} testID="fixed-amount-note">
-          Amount set by the merchant: {formatTaka(fixedAmount)}
+          {t('pay.fixedAmount', { amount: money(fixedAmount) })}
         </Text>
       )}
       <Field
-        label="PIN"
+        label={t('common.pin')}
         testID="pin-input"
         value={pin}
         onChangeText={(t) => setPin(t.replace(/\D/g, ''))}
@@ -68,7 +74,7 @@ export function PayForm({ merchantName, merchantId, fixedAmount, busy, serverErr
         placeholder="••••"
       />
       <ErrorBanner message={error ?? serverError} />
-      <Button title="Pay" onPress={submit} busy={busy} testID="pay-button" />
+      <Button title={t('pay.submit')} onPress={submit} busy={busy} testID="pay-button" />
     </View>
   );
 }

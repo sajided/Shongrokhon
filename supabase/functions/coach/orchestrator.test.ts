@@ -211,7 +211,7 @@ describe('runAsk', () => {
     const { deps } = makeDeps({ live: llm });
     const res = await runAsk(deps, 'u1', 'Which stock should I buy?');
     expect(res.body).toMatchObject({ status: 'OK', topic: 'REGULATED_ADVICE', declined: true });
-    expect(res.body.answer).toBe(`${REGULATED_DISCLAIMER} Build an emergency fund first.`);
+    expect(res.body.answer).toBe(`${REGULATED_DISCLAIMER.en} Build an emergency fund first.`);
   });
 
   it.each(['Which stock should I buy?', 'Should I take a loan for a phone?', 'bitcoin kinbo?', 'শেয়ার কিনব?'])(
@@ -235,7 +235,7 @@ describe('runAsk', () => {
       .toBe('Saving 5000 a month is possible: you kept ৳800.');
     const bad = fakeLlm(JSON.stringify({ topic: 'GENERAL', answer: 'Save 3000.' }), JSON.stringify({ topic: 'GENERAL', answer: 'Save 3000.' }));
     expect((await runAsk(makeDeps({ live: bad }).deps, 'u1', 'Can I save 5000 a month?')).body)
-      .toEqual({ status: 'UNAVAILABLE', answer: UNAVAILABLE_ANSWER });
+      .toEqual({ status: 'UNAVAILABLE', answer: UNAVAILABLE_ANSWER.en });
   });
 
   it('rejects empty or very long questions', async () => {
@@ -247,6 +247,52 @@ describe('runAsk', () => {
 
   it('no provider: a friendly unavailable answer', async () => {
     const { deps } = makeDeps({ mode: 'off' });
-    expect((await runAsk(deps, 'u1', 'how do I save?')).body).toEqual({ status: 'UNAVAILABLE', answer: UNAVAILABLE_ANSWER });
+    expect((await runAsk(deps, 'u1', 'how do I save?')).body).toEqual({ status: 'UNAVAILABLE', answer: UNAVAILABLE_ANSWER.en });
+  });
+});
+
+describe('TC-P4-L10N-06/07/08: the coach in Bangla', () => {
+  it('Bangla insights: Bangla text, Bangla digits, same figures as English, cached per language', async () => {
+    const en = makeDeps({ mode: 'mock' });
+    const bn = makeDeps({ mode: 'mock' });
+    const english = await runInsights(en.deps, 'u1', 'MONTH', 'en');
+    const bangla = await runInsights(bn.deps, 'u1', 'MONTH', 'bn');
+    const cash = (r: typeof english) => (r.body.insights as { kind: string; title: string; body: string }[]).find((i) => i.kind === 'CASH')!;
+    expect(cash(bangla).body).toContain('গত ৩০ দিনে আপনি ১১ বার ক্যাশ আউট করেছেন, মোট ৳১৪,০০০');
+    expect(cash(english).body).toContain('You cashed out 11 times (৳14,000)');
+    const figures = (text: string) => (text.replace(/[০-৯]/g, (d) => String('০১২৩৪৫৬৭৮৯'.indexOf(d))).match(/\d[\d,]*/g) ?? []);
+    expect(figures(cash(bangla).body).sort()).toEqual(figures(cash(english).body).sort()); // word order differs
+    expect(bn.calls.find((c) => c.fn === 'coach_cache_put')?.args.p_period).toBe('MONTH:bn');
+    expect(en.calls.find((c) => c.fn === 'coach_cache_put')?.args.p_period).toBe('MONTH');
+    expect(bn.calls.find((c) => c.fn === 'coach_context')?.args.p_lang).toBe('bn');
+  });
+
+  it('Bangla prompt asks for conversational Bangla; English prompt does not', async () => {
+    const llm = fakeLlm(cards('ok'));
+    await runInsights(makeDeps({ live: llm }).deps, 'u1', 'MONTH', 'bn');
+    expect(llm.requests[0].system).toContain('conversational Bangla');
+    expect(llm.requests[0].user).toContain('"lang":"bn"');
+    expect(llm.requests[0].user).toContain('৳১৪,০০০');
+  });
+
+  it('a Banglish question is answered in the selected language (mock), regulated advice declined in Bangla', async () => {
+    const { deps } = makeDeps({ mode: 'mock' });
+    const general = await runAsk(deps, 'u1', 'amar khoroch komabo kivabe?', 'bn');
+    expect(general.body).toMatchObject({ status: 'OK', topic: 'GENERAL' });
+    expect(general.body.answer).toMatch(/^গত ৩০ দিনে আপনার খরচ হয়েছে ৳১৭,২০০/);
+    const loan = await runAsk(deps, 'u1', 'loan nibo?', 'bn');
+    expect(loan.body.answer).toMatch(new RegExp(`^${REGULATED_DISCLAIMER.bn}`));
+  });
+
+  it('numbers the user typed are echoed in Bangla digits in Bangla mode', async () => {
+    const llm = fakeLlm(JSON.stringify({ topic: 'GENERAL', answer: 'মাসে 5000 টাকা জমাতে হলে {{period}} খরচ ছিল {{spending}}।' }));
+    const res = await runAsk(makeDeps({ live: llm }).deps, 'u1', 'mashe 5000 taka jomate parbo?', 'bn');
+    expect(res.body.answer).toBe('মাসে ৫০০০ টাকা জমাতে হলে গত ৩০ দিনে খরচ ছিল ৳১৭,২০০।');
+  });
+
+  it('a Bangla answer may not invent numbers either (Bangla digits are rejected)', async () => {
+    const llm = fakeLlm(JSON.stringify({ topic: 'GENERAL', answer: '৫০০০ টাকা জমান।' }), JSON.stringify({ topic: 'GENERAL', answer: '৫০০০ টাকা জমান।' }));
+    const res = await runAsk(makeDeps({ live: llm }).deps, 'u1', 'kivabe jomabo?', 'bn');
+    expect(res.body).toEqual({ status: 'UNAVAILABLE', answer: UNAVAILABLE_ANSWER.bn });
   });
 });

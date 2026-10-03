@@ -7,6 +7,11 @@
 //   4. make_payment as the caller (their JWT) with the score id
 // Returns make_payment's JSON unchanged (SUCCESS / FAILED / STEP_UP_REQUIRED).
 //
+// Phase 4: POST { kind: 'CASHOUT', agentCode, ... } or { kind: 'TRANSFER', phone, ... }.
+// The ML model only knows QR merchant payments, so these are scored by SQL
+// rules (flow_score, service role), then make_cashout / make_transfer run as
+// the caller. Same response shapes.
+//
 // Logs carry only event names, reasons and timings, never phone numbers,
 // amounts or PINs.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -44,6 +49,9 @@ async function callerId(authorization: string | null): Promise<string | null> {
 }
 
 interface PayBody {
+  kind?: unknown;
+  agentCode?: unknown;
+  phone?: unknown;
   merchantId?: unknown;
   amount?: unknown;
   pin?: unknown;
@@ -86,6 +94,18 @@ async function scoreId(userId: string, merchantId: string, amount: number, key: 
   return rec.id;
 }
 
+// Cash-outs and transfers: SQL rule score (flow_score), no ML call.
+async function flowScoreId(userId: string, kind: string, target: string, amount: number, key: string): Promise<string | null> {
+  const t0 = Date.now();
+  const { data, error } = await admin.rpc('flow_score', {
+    p_user_id: userId, p_kind: kind, p_target: target, p_amount: amount, p_idempotency_key: key,
+  });
+  if (error) throw new Error(`flow_score: ${error.message}`);
+  if (data.skip) return null; // the make_* RPC rejects the request with a specific code
+  console.log(JSON.stringify({ event: 'risk_scored', source: 'RULES', kind, decision: data.decision, total_ms: Date.now() - t0 }));
+  return data.id;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json(405, { code: 'METHOD_NOT_ALLOWED' });
@@ -100,23 +120,30 @@ Deno.serve(async (req) => {
   } catch {
     return json(400, { code: 'INVALID_REQUEST' });
   }
-  const { merchantId, amount, pin, idempotencyKey, note, confirm } = body;
-  if (typeof merchantId !== 'string' || typeof amount !== 'number' || !Number.isFinite(amount)
+  const { merchantId, agentCode, phone, amount, pin, idempotencyKey, note, confirm } = body;
+  const kind = body.kind ?? 'PAYMENT';
+  const target = kind === 'PAYMENT' ? merchantId : kind === 'CASHOUT' ? agentCode : kind === 'TRANSFER' ? phone : null;
+  if (typeof target !== 'string' || typeof amount !== 'number' || !Number.isFinite(amount)
       || typeof idempotencyKey !== 'string' || !UUID.test(idempotencyKey)
       || (pin !== undefined && typeof pin !== 'string') || (note != null && typeof note !== 'string')) {
     return json(400, { code: 'INVALID_REQUEST' });
   }
 
   try {
-    const score = await scoreId(userId, merchantId, amount, idempotencyKey);
+    const score = kind === 'PAYMENT'
+      ? await scoreId(userId, target, amount, idempotencyKey)
+      : await flowScoreId(userId, kind as string, target, amount, idempotencyKey);
     const asUser = createClient(SUPABASE_URL, ANON_KEY, {
       auth: { persistSession: false },
       global: { headers: { Authorization: authorization! } },
     });
-    const { data, error, status } = await asUser.rpc('make_payment', {
-      p_merchant_id: merchantId, p_amount: amount, p_pin: pin ?? null, p_idempotency_key: idempotencyKey,
-      p_note: note ?? null, p_score_id: score, p_confirm: confirm === true,
-    });
+    const common = { p_amount: amount, p_pin: pin ?? null, p_idempotency_key: idempotencyKey, p_score_id: score,
+                     p_confirm: confirm === true };
+    const { data, error, status } = kind === 'PAYMENT'
+      ? await asUser.rpc('make_payment', { ...common, p_merchant_id: target, p_note: note ?? null })
+      : kind === 'CASHOUT'
+        ? await asUser.rpc('make_cashout', { ...common, p_agent_code: target })
+        : await asUser.rpc('make_transfer', { ...common, p_phone: target, p_note: note ?? null });
     if (error) {
       if (status === 401 || error.code === 'PT401') return json(401, { code: error.message });
       const code = /^[A-Z_]+$/.test(error.message) ? error.message : 'INTERNAL_ERROR';

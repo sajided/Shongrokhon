@@ -4,10 +4,11 @@ import { StyleSheet, View } from 'react-native';
 
 import { Scanner } from '@/components/Scanner';
 import { Button, colors, ErrorBanner } from '@/components/ui';
-import { messageFor } from '@/lib/messages';
+import { useI18n } from '@/i18n/LocaleProvider';
 import { parseBanglaQr } from '@/lib/qr/emv';
 
 export default function Scan() {
+  const { t, msg } = useI18n();
   const [focused, setFocused] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,12 +23,12 @@ export default function Scan() {
     // TC-P1-QR-05/06/07: reject before any payment screen opens.
     const parsed = parseBanglaQr(payload);
     if (!parsed.ok) {
-      setError(messageFor(parsed.code));
+      setError(msg(parsed.code));
       return;
     }
     setError(null);
     router.push({ pathname: '/pay', params: { payload: parsed.qr.raw } });
-  }, []);
+  }, [msg]);
 
   return (
     <View style={styles.container}>
@@ -35,7 +36,7 @@ export default function Scan() {
       {error && (
         <View style={styles.sheet}>
           <ErrorBanner message={error} testID="qr-error" />
-          <Button title="Scan again" onPress={() => setError(null)} testID="scan-again" />
+          <Button title={t('scan.again')} onPress={() => setError(null)} testID="scan-again" />
         </View>
       )}
     </View>

@@ -1,31 +1,33 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { Button, colors, ErrorBanner, Screen } from '@/components/ui';
+import { Button, colors, ErrorBanner, Screen, Text } from '@/components/ui';
+import { useI18n } from '@/i18n/LocaleProvider';
 import { ApiError, getTransactions, type TransactionRow } from '@/lib/api';
-import { formatDateTime, formatTaka, receiptText } from '@/lib/format';
-import { messageFor } from '@/lib/messages';
+import { receiptText } from '@/lib/format';
 import { shareText } from '@/lib/share';
 
 // TC-P1-PAY-13
 export default function Receipt() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const i18n = useI18n();
+  const { t, msg, money, dateTime } = i18n;
   const [txn, setTxn] = useState<TransactionRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
 
   useEffect(() => {
     getTransactions({ id })
-      .then((rows) => (rows[0] ? setTxn(rows[0]) : setError(messageFor('INTERNAL_ERROR'))))
-      .catch((e) => setError(messageFor(e instanceof ApiError ? e.code : null)));
-  }, [id]);
+      .then((rows) => (rows[0] ? setTxn(rows[0]) : setError(msg('INTERNAL_ERROR'))))
+      .catch((e) => setError(msg(e instanceof ApiError ? e.code : null)));
+  }, [id, msg]);
 
   if (error) {
     return (
       <Screen>
         <ErrorBanner message={error} />
-        <Button title="Done" onPress={() => router.dismissTo('/')} />
+        <Button title={t('common.done')} onPress={() => router.dismissTo('/')} />
       </Screen>
     );
   }
@@ -38,28 +40,28 @@ export default function Receipt() {
   }
 
   const rows: [string, string, string][] = [
-    ['Transaction ID', txn.id, 'receipt-id'],
-    [txn.direction === 'OUT' ? 'Paid to' : 'Received from', txn.counterparty_name ?? '—', 'receipt-counterparty'],
-    ['Merchant ID', txn.counterparty_ref ?? '—', 'receipt-merchant-id'],
-    ['Date & time', formatDateTime(txn.created_at), 'receipt-date'],
+    [t('receipt.id'), txn.id, 'receipt-id'],
+    [t(txn.direction === 'OUT' ? 'receipt.paidTo' : 'receipt.receivedFrom'), txn.counterparty_name ?? '—', 'receipt-counterparty'],
+    [t('receipt.ref'), txn.counterparty_ref ?? '—', 'receipt-merchant-id'],
+    [t('receipt.date'), dateTime(txn.created_at), 'receipt-date'],
   ];
+  const success = txn.type === 'CASHOUT' ? t('receipt.successCashout')
+    : txn.type === 'TRANSFER' ? t('receipt.successTransfer') : t('receipt.success');
 
   return (
     <Screen>
       <View style={styles.hero} testID="receipt">
         <Text style={styles.status} testID="receipt-status">
-          {txn.status === 'SUCCESS' ? 'Payment successful' : txn.status}
+          {txn.status === 'SUCCESS' ? success : t(`status.${txn.status}`)}
         </Text>
         <Text style={styles.amount} testID="receipt-amount">
-          {formatTaka(Number(txn.amount))}
+          {money(Number(txn.amount))}
         </Text>
       </View>
       {txn.flagged && (
         // TC-P2-FLOW-02: the payment went through and is being reviewed.
         <View style={styles.flag} testID="receipt-flag-notice" accessibilityRole="alert">
-          <Text style={styles.flagText}>
-            This payment has been flagged for a routine review. You don&apos;t need to do anything.
-          </Text>
+          <Text style={styles.flagText}>{t('receipt.flagged')}</Text>
         </View>
       )}
       {rows.map(([label, value, testID]) => (
@@ -71,16 +73,16 @@ export default function Receipt() {
         </View>
       ))}
       <Button
-        title="Share receipt"
+        title={t('receipt.share')}
         variant="secondary"
         onPress={async () => {
-          const result = await shareText(receiptText(txn));
-          setShareNote(result === 'copied' ? 'Receipt copied to clipboard.' : null);
+          const result = await shareText(receiptText(txn, i18n));
+          setShareNote(result === 'copied' ? t('receipt.copied') : null);
         }}
         testID="share-receipt"
       />
       {shareNote && <Text style={styles.label} testID="share-note">{shareNote}</Text>}
-      <Button title="Done" onPress={() => router.dismissTo('/')} testID="receipt-done" />
+      <Button title={t('common.done')} onPress={() => router.dismissTo('/')} testID="receipt-done" />
     </Screen>
   );
 }

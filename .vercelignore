@@ -1,0 +1,15 @@
+# Upload only what the web build needs (vercel.json). Everything else stays local,
+# including supabase/.env and supabase/functions/.env, which hold server secrets.
+/*
+!/src
+!/public
+!/assets
+!/scripts
+!/app.json
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/vercel.json
+/public/zxing
+/src/**/*.test.ts
+/src/**/*.test.tsx

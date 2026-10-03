@@ -25,4 +25,8 @@ begin
   );
 end $$;
 
-grant execute on function public.cash_in(numeric, text) to authenticated;
+-- Not customer-callable: it would let any user mint up to 50,000 per call from the
+-- system treasury with no agent or cash involved. Service role only (like
+-- admin_credit_wallet) until an agent-initiated, customer-confirmed cash-in exists.
+revoke execute on function public.cash_in(numeric, text) from public, anon, authenticated;
+grant execute on function public.cash_in(numeric, text) to service_role;

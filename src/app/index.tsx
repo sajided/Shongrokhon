@@ -99,7 +99,6 @@ export default function Home() {
             </View>
 
             <View style={styles.actions}>
-              <RoundAction icon="arrow-down-circle" label={t('home.cashin')} href="/cashin" testID="cashin-button" />
               <RoundAction icon="scan" label={t('home.scan')} href="/scan" testID="scan-button" />
               <RoundAction icon="paper-plane" label={t('home.send')} href="/send" testID="send-button" />
               <RoundAction icon="swap-horizontal" label={t('home.cashout')} href="/cashout" testID="cashout-button" />

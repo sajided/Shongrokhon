@@ -4,11 +4,15 @@
 // GoTrue does not provide: a per-number (or per-email) failed-attempt counter, a
 // lockout after repeated wrong codes, and a distinct "expired" error.
 //
-// POST { action: "send", phone | email }          -> { ok: true, expires_in }
-// POST { action: "verify", phone | email, token } -> { session } | { code, ... }
+// POST { action: "send", phone }                   -> { ok: true, expires_in }
+// POST { action: "send", email, redirect_to }      -> { ok: true, expires_in }
+// POST { action: "verify", phone, token }          -> { session } | { code, ... }
 //
-// Email codes are only accepted while app_config.email_sign_in is on, and never
-// for staff accounts (they sign in to the admin app with a password).
+// Email sign-in uses Supabase's confirmation / magic link instead of a code: the
+// link signs the customer in and redirects to `redirect_to`, which GoTrue only
+// accepts if it is in the project's redirect allow list. It is only allowed while
+// app_config.email_sign_in is on, and never for staff accounts (they sign in to
+// the admin app with a password).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -40,8 +44,20 @@ function normalizeEmail(raw: unknown): string | null {
   return email.length <= 254 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? email : null;
 }
 
+// Where the email link lands. GoTrue falls back to the Site URL for anything
+// outside its redirect allow list, so this only has to be a well-formed URL.
+function normalizeRedirect(raw: unknown): string | null {
+  if (typeof raw !== 'string' || raw.length > 2048) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 // Who the code goes to. `key` identifies the attempt counter in otp_attempts.
-type Target = { key: string; send: { phone: string } | { email: string } };
+type Target = { key: string; send: { phone: string } | { email: string; options: { emailRedirectTo?: string } } };
 
 // The attempt counter is keyed by the identifier: 8801XXXXXXXXX or the email.
 async function rpc<T>(fn: string, key: string): Promise<T> {
@@ -54,7 +70,9 @@ async function send(target: Target) {
   const gate = await rpc<{ allowed: boolean; code?: string; locked_until?: string }>('otp_before_send', target.key);
   if (!gate.allowed) return json(429, { code: gate.code, locked_until: gate.locked_until });
 
-  const anon = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
+  // Implicit flow: the link carries the session itself. PKCE would need a code
+  // verifier kept here, which the browser opening the link never sees.
+  const anon = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, flowType: 'implicit' } });
   const { error } = await anon.auth.signInWithOtp(target.send);
   if (error) {
     return json(error.status === 429 ? 429 : 502, { code: error.status === 429 ? 'RATE_LIMITED' : 'OTP_SEND_FAILED' });
@@ -64,6 +82,7 @@ async function send(target: Target) {
 }
 
 async function verify(target: Target, token: unknown) {
+  if ('email' in target.send) return json(400, { code: 'INVALID_REQUEST' });
   if (typeof token !== 'string' || !/^\d{6}$/.test(token)) return json(400, { code: 'INVALID_OTP_FORMAT' });
 
   const gate = await rpc<{ state: string; locked_until?: string }>('otp_before_verify', target.key);
@@ -72,9 +91,7 @@ async function verify(target: Target, token: unknown) {
   if (gate.state === 'EXPIRED') return json(400, { code: 'OTP_EXPIRED' });
 
   const anon = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
-  const { data, error } = 'email' in target.send
-    ? await anon.auth.verifyOtp({ email: target.send.email, token, type: 'email' })
-    : await anon.auth.verifyOtp({ phone: target.send.phone, token, type: 'sms' });
+  const { data, error } = await anon.auth.verifyOtp({ phone: target.send.phone, token, type: 'sms' });
   if (error || !data.session) {
     const fail = await rpc<{ attempts_left: number; locked_until: string | null }>('otp_record_failure', target.key);
     if (fail.locked_until) return json(429, { code: 'OTP_LOCKED', locked_until: fail.locked_until });
@@ -88,7 +105,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json(405, { code: 'METHOD_NOT_ALLOWED' });
 
-  let body: { action?: string; phone?: unknown; email?: unknown; token?: unknown };
+  let body: { action?: string; phone?: unknown; email?: unknown; token?: unknown; redirect_to?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -103,7 +120,8 @@ Deno.serve(async (req) => {
       if (!cfg?.email_sign_in) return json(403, { code: 'EMAIL_SIGN_IN_DISABLED' });
       const { data: staff } = await admin.from('staff').select('user_id').eq('email', email).maybeSingle();
       if (staff) return json(403, { code: 'STAFF_ACCOUNT' });
-      target = { key: email, send: { email } };
+      const redirectTo = normalizeRedirect(body.redirect_to);
+      target = { key: email, send: { email, options: redirectTo ? { emailRedirectTo: redirectTo } : {} } };
     } else {
       const phone = normalizePhone(body.phone);
       if (!phone) return json(400, { code: 'INVALID_PHONE' });

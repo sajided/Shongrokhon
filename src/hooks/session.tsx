@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { getProfile, type Profile } from '@/lib/api';
+import { completeLinkSignIn } from '@/lib/auth';
 import { getSupabase } from '@/lib/supabase';
 
 interface SessionState {
@@ -23,10 +24,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const supabase = getSupabase();
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setSessionLoaded(true);
-    });
+    // An email sign-in link brings its session in the URL; store it first.
+    completeLinkSignIn()
+      .catch(() => undefined)
+      .then(() => supabase.auth.getSession())
+      .then(({ data }) => {
+        setSession(data.session);
+        setSessionLoaded(true);
+      });
     // Fires on sign-in, token refresh, sign-out, and failed refresh of a revoked session.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
     return () => sub.subscription.unsubscribe();

@@ -60,8 +60,8 @@ supabase secrets list
 
 1. **Turn on the switch** in the SQL editor: `update public.app_config set email_sign_in = true;`
 2. **Build the app for email** by adding `EXPO_PUBLIC_AUTH_METHOD=email` to the root `.env`, then rebuilding with `npx expo export --platform web --clear`.
-3. **Make the emails contain the code.** In Authentication → Emails → Templates, edit **Magic Link** and **Confirm signup**. Both must contain `{{ .Token }}`, for example `Your Shongrokhon code is {{ .Token }}`. Supabase's default templates send a link instead, and the app has nowhere to use a link.
-4. **Use 6-digit codes.** In Authentication → Sign In / Providers → Email, set **Email OTP Length** to 6. The app and the `otp` function accept only 6-digit codes.
+3. **Keep the link in the emails.** Customers sign in by clicking Supabase's link; there is no code to type. Supabase's default **Magic Link** (returning customers) and **Confirm signup** (new customers) templates already contain `{{ .ConfirmationURL }}`. If you have edited them, keep that link in both.
+4. **Allow the app's address as a redirect.** In Authentication → URL Configuration, set **Site URL** to the app's address (for example `https://wallet.example.com`) and add the same address under **Redirect URLs**. The link returns there; any address not on the list falls back to the Site URL.
 5. **Set up email sending.** Supabase's built-in sender is for testing. It only delivers to members of the project's team, and it sends only a few emails per hour. Before inviting real customers, add your own SMTP service (Resend, Postmark, SES and so on) under Authentication → Emails → SMTP Settings.
 
 How it works:

@@ -168,7 +168,7 @@ Email sign-in for deployments without an SMS provider (migration `…012`). It i
 | Email account refused while the switch is off | db/10, otp fn (local) | ✅ | `EMAIL_SIGNUP_DISABLED` from the trigger. The `otp` function returns 403 `EMAIL_SIGN_IN_DISABLED`. |
 | Email customer gets a wallet, identified by its lowercased email | db/10, otp fn (local) | ✅ | `users.phone` holds the sign-in identifier. Invited staff emails still get no wallet. |
 | Send money finds an email customer; emails are masked `r***@example.com` | db/10 | ✅ | `normalize_phone` and `mask_phone` accept emails; phone behaviour is unchanged. |
-| Staff email cannot get a customer code | otp fn (local) | ✅ | 403 `STAFF_ACCOUNT`. |
-| Wrong email codes count toward the lockout | otp fn (local) | ✅ | Same `otp_attempts` counter, keyed by email. |
+| Staff email cannot get a customer sign-in link | otp fn (local) | ✅ | 403 `STAFF_ACCOUNT`. |
+| Email sign-in uses Supabase's link, not a code | otp fn, unit | 🟡 | `send` passes `redirect_to` (implicit flow); `verify` refuses email. `parseLinkFragment` unit-tested (session, `LINK_EXPIRED`, `LINK_INVALID`). Click-through not yet run against a live inbox. |
 | Email and recipient validation; auth method switch | unit | ✅ | `normalizeEmail`, `normalizeRecipient`, `readAuthMethod`. |
-| Real email delivery on the hosted project | manual | 🟡 | Needs the email templates to include `{{ .Token }}` (see `docs/deploy-hosted.md`). |
+| Real email delivery on the hosted project | manual | 🟡 | Needs `{{ .ConfirmationURL }}` in the templates and the app's URL in the redirect allow list (see `docs/deploy-hosted.md`). |

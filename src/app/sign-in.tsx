@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Body, Button, ErrorBanner, Field, Screen, Title } from '@/components/ui';
 import { useI18n } from '@/i18n/LocaleProvider';
 import { ApiError } from '@/lib/api';
-import { sendOtp } from '@/lib/auth';
+import { sendOtp, linkError } from '@/lib/auth';
 import { readAuthMethod } from '@/lib/config';
 import { normalizeBdPhone, normalizeEmail } from '@/lib/validation';
 
@@ -14,7 +14,14 @@ export default function SignIn() {
   const { t, msg } = useI18n();
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // An expired or used email link lands back here with the reason in the URL fragment.
+  const [error, setError] = useState<string | null>(() => {
+    const code = AUTH_METHOD === 'email' ? linkError() : null;
+    return code ? msg(code) : null;
+  });
+  // Email sign-in: the address a link was sent to. Opening the link signs in, and
+  // the session listener then routes to set-pin or home.
+  const [linkSentTo, setLinkSentTo] = useState<string | null>(null);
   const email = AUTH_METHOD === 'email';
 
   const submit = async () => {
@@ -25,7 +32,8 @@ export default function SignIn() {
     setBusy(true);
     try {
       await sendOtp(to);
-      router.push({ pathname: '/verify', params: { to } });
+      if (email) setLinkSentTo(to);
+      else router.push({ pathname: '/verify', params: { to } });
     } catch (e) {
       setError(msg(e instanceof ApiError ? e.code : null));
     } finally {
@@ -42,7 +50,10 @@ export default function SignIn() {
           label={t('signIn.email')}
           testID="email-input"
           value={value}
-          onChangeText={setValue}
+          onChangeText={(next) => {
+            setValue(next);
+            setLinkSentTo(null);
+          }}
           keyboardType="email-address"
           autoComplete="email"
           autoCapitalize="none"
@@ -60,8 +71,19 @@ export default function SignIn() {
           maxLength={16}
         />
       )}
+      {linkSentTo && (
+        <Body muted testID="link-sent">
+          {t('signIn.linkSent', { email: linkSentTo })}
+        </Body>
+      )}
       <ErrorBanner message={error} />
-      <Button title={t('signIn.send')} onPress={submit} busy={busy} testID="send-otp" />
+      <Button
+        title={t(email ? (linkSentTo ? 'signIn.resendLink' : 'signIn.sendLink') : 'signIn.send')}
+        variant={linkSentTo ? 'secondary' : undefined}
+        onPress={submit}
+        busy={busy}
+        testID="send-otp"
+      />
     </Screen>
   );
 }

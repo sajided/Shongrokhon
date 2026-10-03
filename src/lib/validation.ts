@@ -21,6 +21,17 @@ export function normalizeBdPhone(input: string): string | null {
   return /^01[3-9]\d{8}$/.test(local) ? `+88${local}` : null;
 }
 
+/** Lowercased email, or null when it does not look like one. The server re-checks. */
+export function normalizeEmail(input: string): string | null {
+  const email = input.trim().toLowerCase();
+  return email.length <= 254 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? email : null;
+}
+
+/** Send-money recipient: a BD mobile number (as E.164) or an email-registered account. */
+export function normalizeRecipient(input: string): string | null {
+  return input.includes('@') ? normalizeEmail(input) : normalizeBdPhone(input);
+}
+
 export type AmountError = 'REQUIRED' | 'INVALID_AMOUNT' | 'AMOUNT_TOO_PRECISE' | 'AMOUNT_ABOVE_LIMIT';
 
 /** TC-P1-PAY-06. */

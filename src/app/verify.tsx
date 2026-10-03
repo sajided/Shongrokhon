@@ -8,7 +8,7 @@ import { sendOtp, verifyOtp } from '@/lib/auth';
 import { isValidOtp } from '@/lib/validation';
 
 export default function Verify() {
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { to } = useLocalSearchParams<{ to: string }>();
   const { t, msg } = useI18n();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -23,7 +23,7 @@ export default function Verify() {
     setBusy(true);
     try {
       // On success the session listener routes to set-pin or home.
-      await verifyOtp(phone, code);
+      await verifyOtp(to, code);
     } catch (e) {
       const err = e instanceof ApiError ? e : null;
       setError(msg(err?.code, err?.details as { attempts_left?: number }));
@@ -37,7 +37,7 @@ export default function Verify() {
   const resend = async () => {
     setBusy(true);
     try {
-      await sendOtp(phone);
+      await sendOtp(to);
       setError(null);
       setCanResend(false);
       setInfo(t('verify.resent'));
@@ -51,14 +51,14 @@ export default function Verify() {
   return (
     <Screen>
       <Title>{t('verify.title')}</Title>
-      <Body muted>{t('verify.body', { phone })}</Body>
+      <Body muted>{to.includes('@') ? t('verify.bodyEmail', { email: to }) : t('verify.body', { phone: to })}</Body>
       <Field
         label={t('verify.code')}
         testID="otp-input"
         value={code}
         onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
         keyboardType="number-pad"
-        autoComplete="sms-otp"
+        autoComplete="one-time-code"
         textContentType="oneTimeCode"
         maxLength={6}
       />

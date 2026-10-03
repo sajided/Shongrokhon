@@ -89,5 +89,54 @@ alter table public.wallets disable trigger user;
 update public.wallets set balance = balance + 1 where id = pg_temp.wallet_of(:'m', 'merchant');
 select is((public.reconcile_ledger() ->> 'mismatched_wallets')::int, 1, 'PERF-03: a broken balance is reported');
 
+--------------------------------------------------------------------------------
+-- INV-01 / SEC-03: staff accounts need a service-role invite
+--------------------------------------------------------------------------------
+select throws_ok($$insert into auth.users (id, email) values (gen_random_uuid(), 'nobody@example.com')$$,
+  '42501', 'EMAIL_SIGNUP_DISABLED', 'An uninvited email account is refused');
+select public.admin_invite_staff('New.Analyst@Example.com');
+select lives_ok($$insert into auth.users (id, email) values (gen_random_uuid(), 'new.analyst@example.com')$$,
+  'An invited email account is created');
+select is((select count(*) from private.staff_invites where email = 'new.analyst@example.com'), 0::bigint,
+  'The invite is used up');
+select throws_ok($$insert into auth.users (id, email) values (gen_random_uuid(), 'new.analyst2@example.com')$$,
+  '42501', 'EMAIL_SIGNUP_DISABLED', 'An invite only admits its own email');
+insert into private.staff_invites (email, created_at) values ('late@example.com', now() - interval '2 hours');
+select throws_ok($$insert into auth.users (id, email) values (gen_random_uuid(), 'late@example.com')$$,
+  '42501', 'EMAIL_SIGNUP_DISABLED', 'An expired invite is refused');
+select throws_ok($$select public.admin_invite_staff('not-an-email')$$, '22023', 'INVALID_EMAIL', 'A malformed email is refused');
+select pg_temp.as_user(:'u') \gset
+select throws_ok($$select public.admin_invite_staff('me@example.com')$$, '42501', null, 'Customers cannot invite staff');
+reset role;
+
+--------------------------------------------------------------------------------
+-- Email sign-in (app_config.email_sign_in): customers without an SMS provider
+--------------------------------------------------------------------------------
+update public.app_config set email_sign_in = true;
+select lives_ok($$insert into auth.users (id, email) values ('77777777-0000-0000-0000-000000000001', 'Rahim@Example.com')$$,
+  'With email sign-in on, an email account is created');
+select is((select phone from public.users where id = '77777777-0000-0000-0000-000000000001'), 'rahim@example.com',
+  'The lowercased email is the sign-in identifier');
+select is((select count(*) from public.wallets where user_id = '77777777-0000-0000-0000-000000000001' and kind = 'customer'),
+  1::bigint, 'An email customer gets a wallet');
+select is((select count(*) from public.staff where user_id = '77777777-0000-0000-0000-000000000001'), 0::bigint,
+  'An email customer is not staff');
+select public.admin_invite_staff('staffer@example.com');
+insert into auth.users (id, email) values ('77777777-0000-0000-0000-000000000002', 'staffer@example.com');
+select is((select count(*) from public.wallets where user_id = '77777777-0000-0000-0000-000000000002'), 0::bigint,
+  'An invited staff email still gets no wallet');
+select is(private.normalize_phone(' Rahim@EXAMPLE.com '), 'rahim@example.com', 'An email recipient is normalised');
+select is(private.normalize_phone('rahim@nodot'), null, 'A malformed email recipient is rejected');
+select is(private.normalize_phone('01712345678'), '+8801712345678', 'Phone recipients are unchanged');
+select is(private.mask_phone('rahim@example.com'), 'r***@example.com', 'An email is masked');
+select is(private.mask_phone('+8801712345678'), '**********5678', 'A phone number is masked as before');
+select pg_temp.as_user(:'u') \gset
+select is((select masked_phone from public.lookup_recipient('RAHIM@example.com')), 'r***@example.com',
+  'Send money finds an email customer');
+reset role;
+update public.app_config set email_sign_in = false;
+select throws_ok($$insert into auth.users (id, email) values (gen_random_uuid(), 'later@example.com')$$,
+  '42501', 'EMAIL_SIGNUP_DISABLED', 'With email sign-in off, an uninvited email account is refused');
+
 select * from finish();
 rollback;

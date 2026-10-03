@@ -1,4 +1,4 @@
-import { ConfigError, readConfig } from './config';
+import { ConfigError, readAuthMethod, readConfig } from './config';
 
 describe('TC-P1-SETUP-04: environment config', () => {
   it('returns the config when both values are present', () => {
@@ -27,5 +27,14 @@ describe('TC-P1-SETUP-04: environment config', () => {
       expect((e as Error).message).not.toContain('super-secret-anon-key');
       expect((e as ConfigError).missing).toEqual(['EXPO_PUBLIC_SUPABASE_URL']);
     }
+  });
+});
+
+describe('customer sign-in method', () => {
+  it('is phone unless email is chosen explicitly', () => {
+    expect(readAuthMethod(undefined)).toBe('phone');
+    expect(readAuthMethod('')).toBe('phone');
+    expect(readAuthMethod('sms')).toBe('phone');
+    expect(readAuthMethod(' Email ')).toBe('email');
   });
 });

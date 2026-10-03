@@ -142,7 +142,7 @@ export interface PaymentResponse {
 export interface PaymentRequest {
   /** PAYMENT (default, QR merchant or biller), CASHOUT at an agent, TRANSFER to another customer. */
   kind?: 'PAYMENT' | 'CASHOUT' | 'TRANSFER';
-  /** PAYMENT: merchant id. CASHOUT: agent code. TRANSFER: recipient phone number. */
+  /** PAYMENT: merchant id. CASHOUT: agent code. TRANSFER: recipient phone number or email. */
   merchantId: string;
   amount: number;
   pin: string;

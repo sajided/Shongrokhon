@@ -72,7 +72,7 @@ Covers every `TC-P4-*` and `TC-MET-*` case in `testcase.md` §4–5. For each ca
 
 | ID | P | Where | Status | Notes |
 |---|---|---|---|---|
-| INV-01 | P0 | db/09, int/phase4, int/authz, e2e/admin, admin | ✅ | Customers and anonymous callers get `NOT_ANALYST` (42501). The `investigate` function returns 403. The admin app shows "Access denied". |
+| INV-01 | P0 | db/09, db/10, int/phase4, int/authz, e2e/admin, admin | ✅ | Customers and anonymous callers get `NOT_ANALYST` (42501). The `investigate` function returns 403. The admin app shows "Access denied". Email accounts need a one-time, one-hour invite from the service role (`admin_invite_staff`, used by `scripts/create-analyst.ts`); without it the sign-up trigger refuses them. |
 | INV-02 | P0 | db/09, int/phase4, e2e/admin | ✅ | The queue shows score, time, masked wallets and status. |
 | INV-03 | P0 | int/phase4, e2e/admin, admin | ✅ | SHAP diverging bar chart (direction and magnitude), plus a table. |
 | INV-04 | P0 | ml (`test_explain.py`) | ✅ | XGBoost `pred_contribs`: base + Σ contributions = model margin, max error < 1e-4 over the test set. It matches `/score`. |
@@ -158,3 +158,17 @@ Covers every `TC-P4-*` and `TC-MET-*` case in `testcase.md` §4–5. For each ca
 - **pgTAP 09/10:** assertions are scoped to the test's own data, so other suites' leftovers don't affect them.
 - **Integration and E2E account deletion:** uses a throwaway customer instead of a shared test number.
 - **ML web stack:** FastAPI 0.115 → 0.142.2 (Starlette 0.41 → 1.7.0) and pytest 8 → 9.1.1.
+- **Staff creation (`scripts/create-analyst.ts`):** GoTrue's admin `createUser` inserts the user before it applies `app_metadata`, so the sign-up trigger refused every analyst. Staff emails now need a one-hour, single-use service-role invite (`admin_invite_staff`, migration `…011`). Covered by db/10.
+
+## Deployment additions (not in testcase.md)
+Email sign-in for deployments without an SMS provider (migration `…012`). It is off unless `app_config.email_sign_in = true` **and** the app is built with `EXPO_PUBLIC_AUTH_METHOD=email`.
+
+| Check | Where | Status | Notes |
+|---|---|---|---|
+| Email account refused while the switch is off | db/10, otp fn (local) | ✅ | `EMAIL_SIGNUP_DISABLED` from the trigger. The `otp` function returns 403 `EMAIL_SIGN_IN_DISABLED`. |
+| Email customer gets a wallet, identified by its lowercased email | db/10, otp fn (local) | ✅ | `users.phone` holds the sign-in identifier. Invited staff emails still get no wallet. |
+| Send money finds an email customer; emails are masked `r***@example.com` | db/10 | ✅ | `normalize_phone` and `mask_phone` accept emails; phone behaviour is unchanged. |
+| Staff email cannot get a customer code | otp fn (local) | ✅ | 403 `STAFF_ACCOUNT`. |
+| Wrong email codes count toward the lockout | otp fn (local) | ✅ | Same `otp_attempts` counter, keyed by email. |
+| Email and recipient validation; auth method switch | unit | ✅ | `normalizeEmail`, `normalizeRecipient`, `readAuthMethod`. |
+| Real email delivery on the hosted project | manual | 🟡 | Needs the email templates to include `{{ .Token }}` (see `docs/deploy-hosted.md`). |

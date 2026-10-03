@@ -41,3 +41,14 @@ export function readConfig(env: Env = defaultEnv()): AppConfig {
   if (missing.length) throw new ConfigError(missing);
   return { supabaseUrl: url, supabaseAnonKey: key };
 }
+
+export type AuthMethod = 'phone' | 'email';
+
+/**
+ * How customers sign in: an SMS code (default) or, for deployments without an
+ * SMS provider, an email code. The server must allow email too
+ * (app_config.email_sign_in).
+ */
+export function readAuthMethod(value: string | undefined = process.env.EXPO_PUBLIC_AUTH_METHOD): AuthMethod {
+  return value?.trim().toLowerCase() === 'email' ? 'email' : 'phone';
+}

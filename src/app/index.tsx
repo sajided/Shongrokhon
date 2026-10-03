@@ -61,6 +61,7 @@ export default function Home() {
             </View>
             <NotificationBanner notices={notices} onDismiss={dismiss} />
             <Button title="Scan QR to pay" onPress={() => router.push('/scan')} testID="scan-button" />
+            <Button title="AI coach: your spending" variant="secondary" onPress={() => router.push('/coach')} testID="coach-button" />
             <ErrorBanner message={error} />
             <Text style={styles.section}>Recent transactions</Text>
           </View>

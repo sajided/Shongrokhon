@@ -61,6 +61,9 @@ function RootNavigator() {
         <Stack.Screen name="scan" options={{ title: 'Scan QR' }} />
         <Stack.Screen name="pay" options={{ title: 'Pay merchant' }} />
         <Stack.Screen name="receipt/[id]" options={{ title: 'Receipt', headerBackVisible: false }} />
+        <Stack.Screen name="coach/index" options={{ title: 'AI coach' }} />
+        <Stack.Screen name="coach/savings" options={{ title: 'Savings planner' }} />
+        <Stack.Screen name="coach/forecast" options={{ title: 'Cash-flow forecast' }} />
       </Stack.Protected>
     </Stack>
   );

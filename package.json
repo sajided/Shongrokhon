@@ -33,6 +33,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@playwright/test": "^1.63.0",
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "^30.0.0",
@@ -61,6 +62,7 @@
     "ml:up": "docker compose -f ml/docker-compose.yml up -d --build --wait ml",
     "ml:down": "docker compose -f ml/docker-compose.yml down",
     "ml:train": "docker compose -f ml/docker-compose.yml run --rm --no-deps -v \"$PWD\":/repo -w /repo/ml ml sh -c 'python -m shongrokhon_ml.train && python -m shongrokhon_ml.evaluate && python -m shongrokhon_ml.parity && python -m shongrokhon_ml.seed_export'",
+    "ml:seed": "docker compose -f ml/docker-compose.yml run --rm --no-deps -v \"$PWD\":/repo -w /repo/ml ml python -m shongrokhon_ml.seed_export",
     "ml:test": "docker compose -f ml/docker-compose.yml run --rm --no-deps -v \"$PWD\":/repo -w /repo/ml ml python -m pytest -q",
     "ml:network": "docker compose -f ml/docker-compose.yml run --rm network-job python -m shongrokhon_ml.network --once",
     "ml:bench": "docker compose -f ml/docker-compose.yml run --rm --no-deps ml python bench/latency.py --url http://shongrokhon-ml:8000 --sequential 1000"

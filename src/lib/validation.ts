@@ -45,3 +45,23 @@ export function isValidPin(pin: string): boolean {
 export function isValidOtp(otp: string): boolean {
   return /^\d{6}$/.test(otp);
 }
+
+/** Same as app_config.savings_max_target. */
+export const SAVINGS_MAX_TARGET = 1000000;
+
+export type GoalAmountError = AmountError | 'GOAL_AMOUNT_TOO_LARGE';
+
+/** TC-P3-SAVE-03/08: a savings target; Bangla digits and commas are accepted. */
+export function validateGoalAmount(input: string): { ok: true; value: number } | { ok: false; code: GoalAmountError } {
+  const result = validateAmount(input, Number.POSITIVE_INFINITY);
+  if (result.ok && result.value > SAVINGS_MAX_TARGET) return { ok: false, code: 'GOAL_AMOUNT_TOO_LARGE' };
+  return result;
+}
+
+/** TC-P3-SAVE-03: whole months, 1 to 60. */
+export function validateGoalMonths(input: string): { ok: true; value: number } | { ok: false; code: 'GOAL_MONTHS_INVALID' } {
+  const text = toAsciiDigits(input).trim();
+  const value = Number(text);
+  if (!/^\d+$/.test(text) || value < 1 || value > 60) return { ok: false, code: 'GOAL_MONTHS_INVALID' };
+  return { ok: true, value };
+}

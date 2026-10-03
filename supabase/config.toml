@@ -272,6 +272,18 @@ max_frequency = "5s"
 8801911000008 = "123456"
 8801911000009 = "123456"
 8801911000010 = "123456"
+# Phase 3 personas: U-CASHHEAVY, U-TIGHT, U-BULK, and the Phase 3 merchants (supabase/seed_history.sql)
+8801611000001 = "123456"
+8801611000002 = "123456"
+8801611000003 = "123456"
+8801811000021 = "123456"
+8801811000022 = "123456"
+8801811000023 = "123456"
+8801811000024 = "123456"
+8801811000025 = "123456"
+8801811000026 = "123456"
+8801811000027 = "123456"
+8801811000028 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
@@ -421,4 +433,11 @@ verify_jwt = false
 # then calls make_payment as the caller (TC-P2-FLOW-*). ML_URL /
 # ML_SERVICE_TOKEN come from supabase/functions/.env.
 [functions.pay]
+verify_jwt = false
+
+# AI coach (Phase 3): signed-in users only, verified in the function with
+# auth.getClaims for the same reason as `pay`. ANTHROPIC_API_KEY / COACH_MODEL
+# come from supabase/functions/.env; app_config.coach_llm_mode switches between
+# the live model, the deterministic mock (tests) and off.
+[functions.coach]
 verify_jwt = false

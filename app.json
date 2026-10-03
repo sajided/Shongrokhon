@@ -11,7 +11,7 @@
       "favicon": "./assets/images/favicon.png",
       "name": "Shongrokhon",
       "shortName": "Shongrokhon",
-      "themeColor": "#0B6E4F",
+      "themeColor": "#FFFFFF",
       "backgroundColor": "#FFFFFF"
     },
     "plugins": [

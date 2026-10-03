@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ConfigGate } from '@/components/ConfigGate';
-import { Body, Button, Screen, Title } from '@/components/ui';
+import { Body, Button, colors, Screen, Title } from '@/components/ui';
 import { SessionProvider, useSession } from '@/hooks/session';
 import { LocaleProvider, useI18n } from '@/i18n/LocaleProvider';
 import { signOut } from '@/lib/auth';
@@ -55,7 +55,13 @@ function RootNavigator() {
 
   // Route guards (TC-P1-AUTH-09): protected screens are unreachable without a session.
   return (
-    <Stack screenOptions={{ headerTitleStyle: { fontWeight: '600' } }}>
+    <Stack
+      screenOptions={{
+        headerShadowVisible: false,
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontWeight: '700' },
+        contentStyle: { backgroundColor: colors.background },
+      }}>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ title: t('nav.signIn') }} />
         <Stack.Screen name="verify" options={{ title: t('nav.verify') }} />
@@ -64,7 +70,7 @@ function RootNavigator() {
         <Stack.Screen name="set-pin" options={{ title: t('nav.setPin'), headerBackVisible: false }} />
       </Stack.Protected>
       <Stack.Protected guard={signedIn && hasPin}>
-        <Stack.Screen name="index" options={{ title: t('nav.home') }} />
+        <Stack.Screen name="index" options={{ title: t('nav.home'), headerShown: false }} />
         <Stack.Screen name="scan" options={{ title: t('nav.scan') }} />
         <Stack.Screen name="pay" options={{ title: t('nav.pay') }} />
         <Stack.Screen name="receipt/[id]" options={{ title: t('nav.receipt'), headerBackVisible: false }} />

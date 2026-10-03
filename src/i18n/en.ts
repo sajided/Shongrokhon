@@ -44,6 +44,8 @@ export const en = {
   'config.fix': 'Copy .env.example to .env, fill in the values, and restart the bundler.',
 
   // Sign-in / verify / PIN
+  'signIn.brandBadge': 'SHONGROKHON FINANCE',
+  'signIn.security': '256-bit encrypted authentication',
   'signIn.title': 'Welcome to Shongrokhon',
   'signIn.body': 'Enter your mobile number. New numbers are registered automatically.',
   'signIn.phone': 'Mobile number',

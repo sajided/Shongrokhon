@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { View, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
 
-import { Body, Button, ErrorBanner, Field, Title, colors, Text } from '@/components/ui';
+import { Body, Button, ErrorBanner, Field, Title, Text } from '@/components/ui';
 import { useI18n } from '@/i18n/LocaleProvider';
 import { ApiError } from '@/lib/api';
 import { sendOtp, linkError } from '@/lib/auth';
@@ -56,7 +56,7 @@ export default function SignIn() {
           </View>
 
           <View style={styles.pillBadge}>
-            <Text style={styles.pillBadgeText}>SHONGROKHON FINANCE</Text>
+            <Text style={styles.pillBadgeText}>{t('signIn.brandBadge')}</Text>
           </View>
 
           <Title>{t('signIn.title')}</Title>
@@ -78,7 +78,6 @@ export default function SignIn() {
               keyboardType="email-address"
               autoComplete="email"
               autoCapitalize="none"
-              placeholder="name@example.com"
               maxLength={254}
             />
           ) : (
@@ -114,7 +113,7 @@ export default function SignIn() {
           />
 
           <View style={styles.securityNote}>
-            <Text style={styles.securityText}>🔒 256-bit encrypted authentication</Text>
+            <Text style={styles.securityText}>🔒 {t('signIn.security')}</Text>
           </View>
         </View>
       </ScrollView>

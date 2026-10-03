@@ -14,7 +14,7 @@ const ROOT = join(__dirname, '..');
 const DIRS = ['src/app', 'src/components'];
 const TEXT_PROPS = new Set(['title', 'label', 'placeholder', 'body', 'accessibilityLabel', 'confirmLabel', 'submitLabel']);
 /** Not words: formats, codes and glyphs that read the same in every language. */
-const ALLOWED = new Set(['01XXXXXXXXX', 'AGENT001', '0.00', '••••', '—', '›', '·', '+', '−', '৳']);
+const ALLOWED = new Set(['01XXXXXXXXX', 'AGENT001', '0.00', '••••', '—', '›', '·', '+', '−', '৳', 'S']);
 const LETTERS = /[A-Za-z]/;
 
 export interface Finding {

@@ -9,16 +9,17 @@
 //   regulated-advice disclaimer (LLM-05)
 
 import { CATEGORIZE_SCHEMA, merchantRefs, parseCategories } from './categorize.ts';
-import { buildFacts, ground, numbersIn, type Facts } from './grounding.ts';
+import { buildFacts, digits, ground, numbersIn, type Facts } from './grounding.ts';
 import {
-  ASK_SCHEMA, ASK_SYSTEM, askMessage, CATEGORIZE_SYSTEM, categorizeMessage, INSIGHTS_SCHEMA, INSIGHTS_SYSTEM,
-  insightsMessage, PROMPT_VERSION,
+  ASK_SCHEMA, askMessage, askSystem, CATEGORIZE_SYSTEM, categorizeMessage, INSIGHTS_SCHEMA, insightsMessage,
+  insightsSystem, PROMPT_VERSION,
 } from './prompts.ts';
 import { LlmError, MockProvider, type LlmProvider, type LlmRequest } from './provider.ts';
-import { scrubPII } from './sanitize.ts';
+import { scrubPII } from '../_shared/llm/sanitize.ts';
 import { REGULATED_DISCLAIMER, templateInsights, UNAVAILABLE_ANSWER, type InsightsInput } from './template.ts';
 import {
-  ASK_TOPICS, INSIGHT_KINDS, PERIOD_LABELS, type AskTopic, type CoachContext, type Insight, type Period, type Summary,
+  ASK_TOPICS, INSIGHT_KINDS, PERIOD_LABELS, PERIOD_LABELS_BN, type AskTopic, type CoachContext, type Insight, type Lang,
+  type Period, type Summary,
 } from './types.ts';
 
 export interface CoachDeps {
@@ -91,9 +92,12 @@ async function callLlm<T>(
   return { ok: false, reason };
 }
 
-async function context(deps: CoachDeps, userId: string, period: Period): Promise<CoachContext> {
-  return deps.rpc<CoachContext>('coach_context', { p_user_id: userId, p_period: period });
+async function context(deps: CoachDeps, userId: string, period: Period, lang: Lang = 'en'): Promise<CoachContext> {
+  return deps.rpc<CoachContext>('coach_context', { p_user_id: userId, p_period: period, p_lang: lang });
 }
+
+/** Insights are cached per period and language (TC-P3-MW-08, TC-P4-L10N-06). */
+export const cacheKey = (period: Period, lang: Lang) => (lang === 'en' ? period : `${period}:${lang}`);
 
 /** Categorises merchants the user paid that have no category yet. Returns true if any were added. */
 async function categorizePending(deps: CoachDeps, provider: LlmProvider | null, userId: string, ctx: CoachContext) {
@@ -122,9 +126,10 @@ async function categorizePending(deps: CoachDeps, provider: LlmProvider | null, 
   return true;
 }
 
-export function insightsInput(summary: Summary, period: Period, facts: Facts): InsightsInput {
+export function insightsInput(summary: Summary, period: Period, facts: Facts, lang: Lang = 'en'): InsightsInput {
   return {
-    period: PERIOD_LABELS[period],
+    lang,
+    period: (lang === 'bn' ? PERIOD_LABELS_BN : PERIOD_LABELS)[period],
     cash_dependency: summary.cashout.level,
     net_is_positive: summary.net >= 0,
     has_savings: summary.saved > 0,
@@ -173,14 +178,14 @@ async function rateLimited(deps: CoachDeps, userId: string): Promise<CoachRespon
   return r.allowed ? null : { status: 429, body: { code: 'RATE_LIMITED', retry_after: r.retry_after } };
 }
 
-export async function runInsights(deps: CoachDeps, userId: string, period: Period): Promise<CoachResponse> {
+export async function runInsights(deps: CoachDeps, userId: string, period: Period, lang: Lang = 'en'): Promise<CoachResponse> {
   const limited = await rateLimited(deps, userId);
   if (limited) return limited;
 
-  let ctx = await context(deps, userId, period);
+  let ctx = await context(deps, userId, period, lang);
   const provider = providerFor(ctx, deps);
   const categoriesUpdated = await categorizePending(deps, provider, userId, ctx);
-  if (categoriesUpdated) ctx = await context(deps, userId, period);
+  if (categoriesUpdated) ctx = await context(deps, userId, period, lang);
 
   const base = { period, categories_updated: categoriesUpdated };
   if (ctx.summary.txn_count < ctx.config.min_txns) {
@@ -194,17 +199,17 @@ export async function runInsights(deps: CoachDeps, userId: string, period: Perio
     };
   }
 
-  const facts = buildFacts(ctx.summary, period);
-  const input = insightsInput(ctx.summary, period, facts);
+  const facts = buildFacts(ctx.summary, period, lang);
+  const input = insightsInput(ctx.summary, period, facts, lang);
   const generatedAt = new Date(deps.now()).toISOString();
   if (provider) {
     const res = await callLlm(deps, provider, userId, {
-      action: 'INSIGHTS', system: INSIGHTS_SYSTEM, user: insightsMessage(input), schema: INSIGHTS_SCHEMA,
+      action: 'INSIGHTS', system: insightsSystem(lang), user: insightsMessage(input), schema: INSIGHTS_SCHEMA,
       maxTokens: 2000,
     }, ctx.config.llm_timeout_ms, (text) => validateInsights(text, facts));
     if (res.ok) {
       await deps.rpc('coach_cache_put', {
-        p_user_id: userId, p_period: period, p_hash: ctx.summary.data_hash,
+        p_user_id: userId, p_period: cacheKey(period, lang), p_hash: ctx.summary.data_hash,
         p_payload: { insights: res.value }, p_source: provider.source,
       });
       return {
@@ -235,7 +240,7 @@ export function validateAnswer(text: string, facts: Facts, allowedNumbers: strin
   return g.ok ? { topic: topic as AskTopic, answer: g.text } : null;
 }
 
-export async function runAsk(deps: CoachDeps, userId: string, question: unknown): Promise<CoachResponse> {
+export async function runAsk(deps: CoachDeps, userId: string, question: unknown, lang: Lang = 'en'): Promise<CoachResponse> {
   if (typeof question !== 'string' || !question.trim() || question.length > MAX_QUESTION) {
     return { status: 400, body: { code: 'INVALID_QUESTION' } };
   }
@@ -243,24 +248,26 @@ export async function runAsk(deps: CoachDeps, userId: string, question: unknown)
   if (limited) return limited;
 
   const period: Period = 'MONTH';
-  const ctx = await context(deps, userId, period);
+  const ctx = await context(deps, userId, period, lang);
   const provider = providerFor(ctx, deps);
-  if (!provider) return { status: 200, body: { status: 'UNAVAILABLE', answer: UNAVAILABLE_ANSWER } };
+  if (!provider) return { status: 200, body: { status: 'UNAVAILABLE', answer: UNAVAILABLE_ANSWER[lang] } };
 
   const clean = scrubPII(question, MAX_QUESTION);
-  const facts = buildFacts(ctx.summary, period);
+  const facts = buildFacts(ctx.summary, period, lang);
   const allowed = numbersIn(clean);
   const res = await callLlm(deps, provider, userId, {
-    action: 'ASK', system: ASK_SYSTEM, user: askMessage(clean, insightsInput(ctx.summary, period, facts)),
+    action: 'ASK', system: askSystem(lang), user: askMessage(clean, insightsInput(ctx.summary, period, facts, lang)),
     schema: ASK_SCHEMA, maxTokens: 1000,
   }, ctx.config.llm_timeout_ms, (text) => validateAnswer(text, facts, allowed));
-  if (!res.ok) return { status: 200, body: { status: 'UNAVAILABLE', answer: UNAVAILABLE_ANSWER } };
+  if (!res.ok) return { status: 200, body: { status: 'UNAVAILABLE', answer: UNAVAILABLE_ANSWER[lang] } };
 
-  const { topic, answer } = res.value;
+  const { topic } = res.value;
+  // Numbers the user typed come back as typed; in Bangla mode every digit is Bangla (TC-P4-L10N-04).
+  const answer = digits(res.value.answer, lang);
   const declined = topic === 'REGULATED_ADVICE';
   return {
     status: 200,
     body: { status: 'OK', source: provider.source, topic, declined,
-            answer: declined ? `${REGULATED_DISCLAIMER} ${answer}` : answer },
+            answer: declined ? `${REGULATED_DISCLAIMER[lang]} ${answer}` : answer },
   };
 }

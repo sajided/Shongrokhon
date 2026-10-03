@@ -18,7 +18,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { AnthropicProvider } from '../supabase/functions/coach/anthropic';
+import { AnthropicProvider } from '../supabase/functions/_shared/llm/anthropic';
 import { CATEGORIZE_SCHEMA, merchantRefs, parseCategories } from '../supabase/functions/coach/categorize';
 import { buildFacts, numbersIn } from '../supabase/functions/coach/grounding';
 import { insightsInput, validateAnswer, validateInsights } from '../supabase/functions/coach/orchestrator';
@@ -26,7 +26,7 @@ import {
   ASK_SCHEMA, ASK_SYSTEM, askMessage, CATEGORIZE_SYSTEM, categorizeMessage, INSIGHTS_SCHEMA, INSIGHTS_SYSTEM,
   insightsMessage,
 } from '../supabase/functions/coach/prompts';
-import type { LlmRequest } from '../supabase/functions/coach/provider';
+import type { LlmRequest } from '../supabase/functions/_shared/llm/provider';
 import type { Category, Summary } from '../supabase/functions/coach/types';
 
 const KEY = process.env.ANTHROPIC_API_KEY;

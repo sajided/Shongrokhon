@@ -57,3 +57,6 @@ supabase/functions/.env
 ml/.cache/
 __pycache__/
 .pytest_cache/
+
+# Copied from node_modules on install (scripts/copy-zxing.mjs)
+public/zxing/

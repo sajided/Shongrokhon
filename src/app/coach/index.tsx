@@ -3,24 +3,27 @@
 // Function (slower: LLM), with its own skeleton and retry.
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AskCoach } from '@/components/AskCoach';
 import {
   CashDependencyCard, CategoryBreakdown, EmptyState, InsightCards, PeriodFilter, RetryCard, Skeleton, SummaryRow,
 } from '@/components/CoachCards';
-import { Button, colors } from '@/components/ui';
+import { Button, colors, Text } from '@/components/ui';
+import { useI18n } from '@/i18n/LocaleProvider';
+import { track, useScreenView } from '@/lib/analytics';
 import {
   ApiError, getCoachDashboard, getInsights, type CoachDashboard, type CoachPeriod, type InsightsResponse,
 } from '@/lib/api';
-import { messageFor } from '@/lib/messages';
 
-type Load<T> = { state: 'loading' } | { state: 'error'; message: string } | { state: 'ready'; data: T };
+type Load<T> = { state: 'loading' } | { state: 'error'; code: string | null } | { state: 'ready'; data: T };
 
-const errorOf = (e: unknown) => ({ state: 'error' as const, message: messageFor(e instanceof ApiError ? e.code : null) });
+const errorOf = (e: unknown) => ({ state: 'error' as const, code: e instanceof ApiError ? e.code : null });
 
 export default function CoachScreen() {
+  const { t, msg, locale } = useI18n();
+  useScreenView('coach');
   const [period, setPeriod] = useState<CoachPeriod>('MONTH');
   const [dashboard, setDashboard] = useState<Load<CoachDashboard>>({ state: 'loading' });
   const [insights, setInsights] = useState<Load<InsightsResponse>>({ state: 'loading' });
@@ -38,15 +41,16 @@ export default function CoachScreen() {
 
   const loadInsights = useCallback(async (p: CoachPeriod, request: number) => {
     try {
-      const data = await getInsights(p);
+      const data = await getInsights(p, locale);
       if (latest.current !== request) return;
       setInsights({ state: 'ready', data });
+      track('insights_loaded', { period: p, source: data.source ?? 'NONE' });
       // New merchants were just categorised: reload the numbers so the breakdown uses them.
       if (data.categories_updated) await loadDashboard(p, request);
     } catch (e) {
       if (latest.current === request) setInsights(errorOf(e));
     }
-  }, [loadDashboard]);
+  }, [loadDashboard, locale]);
 
   const load = useCallback(async (p: CoachPeriod) => {
     const request = ++latest.current;
@@ -76,12 +80,12 @@ export default function CoachScreen() {
 
         {dashboard.state === 'loading' && <Skeleton lines={4} testID="dashboard-skeleton" />}
         {dashboard.state === 'error' && (
-          <RetryCard message={dashboard.message} onRetry={() => load(period)} testID="dashboard-error" />
+          <RetryCard message={msg(dashboard.code)} onRetry={() => load(period)} testID="dashboard-error" />
         )}
         {empty && (
           <EmptyState
-            title="Nothing to show yet"
-            body="Make a few payments with Shongrokhon and your coach will explain where your money goes."
+            title={t('coach.emptyTitle')}
+            body={t('coach.emptyBody')}
           />
         )}
         {dashboard.state === 'ready' && !empty && (
@@ -94,21 +98,21 @@ export default function CoachScreen() {
 
         {!empty && (
           <View style={{ gap: 12 }}>
-            <Text style={styles.section}>Coach insights</Text>
+            <Text style={styles.section}>{t('coach.insightsTitle')}</Text>
             {insights.state === 'loading' && <Skeleton testID="insights-skeleton" />}
             {insights.state === 'error' && (
-              <RetryCard message={insights.message} onRetry={() => load(period)} testID="insights-error" />
+              <RetryCard message={msg(insights.code)} onRetry={() => load(period)} testID="insights-error" />
             )}
             {insights.state === 'ready' && insights.data.status === 'INSUFFICIENT_DATA' && (
-              <EmptyState title="Not enough data yet" body="A few more transactions and your coach will have tips for you."
+              <EmptyState title={t('coach.notEnoughTitle')} body={t('coach.notEnoughBody')}
                 testID="insights-empty" />
             )}
             {insights.state === 'ready' && insights.data.status === 'OK' && <InsightCards insights={insights.data.insights} />}
           </View>
         )}
 
-        <Button title="Savings planner" variant="secondary" onPress={() => router.push('/coach/savings')} testID="open-savings" />
-        <Button title="Cash-flow forecast" variant="secondary" onPress={() => router.push('/coach/forecast')} testID="open-forecast" />
+        <Button title={t('coach.openSavings')} variant="secondary" onPress={() => router.push('/coach/savings')} testID="open-savings" />
+        <Button title={t('coach.openForecast')} variant="secondary" onPress={() => router.push('/coach/forecast')} testID="open-forecast" />
         {!empty && <AskCoach />}
       </ScrollView>
     </SafeAreaView>

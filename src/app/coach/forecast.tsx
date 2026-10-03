@@ -1,6 +1,6 @@
 // Cash-Flow Forecasting (TC-P3-FCST-*): computed on the device from the user's
 // own history (src/lib/forecast.ts); no LLM involved.
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 
 import { RetryCard, Skeleton } from '@/components/CoachCards';
@@ -8,9 +8,12 @@ import { ForecastChart, LowBalanceWarning, LowConfidenceNote, RecurringList } fr
 import { Body, Screen, Title } from '@/components/ui';
 import { ApiError, getCashHistory } from '@/lib/api';
 import { forecast, type Forecast } from '@/lib/forecast';
-import { messageFor } from '@/lib/messages';
+import { useI18n } from '@/i18n/LocaleProvider';
+import { useScreenView } from '@/lib/analytics';
 
 export default function ForecastScreen() {
+  const { t, msg } = useI18n();
+  useScreenView('forecast');
   const [result, setResult] = useState<Forecast | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,9 +22,9 @@ export default function ForecastScreen() {
       setResult(forecast(await getCashHistory(120)));
       setError(null);
     } catch (e) {
-      setError(messageFor(e instanceof ApiError ? e.code : null));
+      setError(msg(e instanceof ApiError ? e.code : null));
     }
-  }, []);
+  }, [msg]);
 
   useFocusEffect(
     useCallback(() => {
@@ -31,16 +34,19 @@ export default function ForecastScreen() {
 
   return (
     <Screen>
-      <Title>Cash-flow forecast</Title>
+      <Title>{t('forecast.title')}</Title>
       {error && <RetryCard message={error} onRetry={load} testID="forecast-error" />}
       {!result && !error && <Skeleton testID="forecast-skeleton" />}
       {result && (
         <>
           {result.lowConfidence && <LowConfidenceNote days={result.historyDays} />}
-          {result.warning && <LowBalanceWarning warning={result.warning} />}
+          {result.warning && (
+            <LowBalanceWarning warning={result.warning}
+              onPayBill={(merchantId) => router.push({ pathname: '/pay', params: { merchantId, bill: '1' } })} />
+          )}
           <ForecastChart forecast={result} />
           <RecurringList forecast={result} />
-          <Body muted>Based on your regular income, bills and everyday spending. Real days will differ.</Body>
+          <Body muted>{t('forecast.footer')}</Body>
         </>
       )}
     </Screen>

@@ -1,18 +1,20 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NotificationBanner } from '@/components/NotificationBanner';
-import { Button, colors, ErrorBanner } from '@/components/ui';
+import { Button, colors, ErrorBanner, Text } from '@/components/ui';
 import { useSession } from '@/hooks/session';
+import { useI18n } from '@/i18n/LocaleProvider';
+import { useScreenView } from '@/lib/analytics';
 import { ApiError, getNotifications, getTransactions, markNotificationRead, type Notice, type TransactionRow } from '@/lib/api';
 import { signOut } from '@/lib/auth';
-import { formatDateTime, formatTaka } from '@/lib/format';
-import { messageFor } from '@/lib/messages';
 
 export default function Home() {
   const { profile, refreshProfile } = useSession();
+  const { t, msg, money } = useI18n();
+  useScreenView('home');
   const [rows, setRows] = useState<TransactionRow[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -26,11 +28,11 @@ export default function Home() {
       setNotices(unread);
       setError(null);
     } catch (e) {
-      setError(messageFor(e instanceof ApiError ? e.code : null));
+      setError(msg(e instanceof ApiError ? e.code : null));
     } finally {
       setRefreshing(false);
     }
-  }, [refreshProfile]);
+  }, [refreshProfile, msg]);
 
   const dismiss = useCallback((id: string) => {
     setNotices((all) => all.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)));
@@ -53,24 +55,38 @@ export default function Home() {
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.balanceCard}>
-              <Text style={styles.balanceLabel}>Available balance</Text>
+              <Text style={styles.balanceLabel}>{t('home.balance')}</Text>
               <Text style={styles.balance} testID="balance">
-                {profile ? formatTaka(Number(profile.balance)) : '—'}
+                {profile ? money(Number(profile.balance)) : '—'}
               </Text>
               <Text style={styles.phone}>{profile?.phone}</Text>
             </View>
             <NotificationBanner notices={notices} onDismiss={dismiss} />
-            <Button title="Scan QR to pay" onPress={() => router.push('/scan')} testID="scan-button" />
-            <Button title="AI coach: your spending" variant="secondary" onPress={() => router.push('/coach')} testID="coach-button" />
+            <View style={styles.actions}>
+              <View style={styles.action}>
+                <Button title={t('home.scan')} onPress={() => router.push('/scan')} testID="scan-button" />
+              </View>
+              <View style={styles.action}>
+                <Button title={t('home.cashout')} variant="secondary" onPress={() => router.push('/cashout')} testID="cashout-button" />
+              </View>
+              <View style={styles.action}>
+                <Button title={t('home.send')} variant="secondary" onPress={() => router.push('/send')} testID="send-button" />
+              </View>
+              <View style={styles.action}>
+                <Button title={t('home.bills')} variant="secondary" onPress={() => router.push('/bills')} testID="bills-button" />
+              </View>
+            </View>
+            <Button title={t('home.coach')} variant="secondary" onPress={() => router.push('/coach')} testID="coach-button" />
             <ErrorBanner message={error} />
-            <Text style={styles.section}>Recent transactions</Text>
+            <Text style={styles.section}>{t('home.recent')}</Text>
           </View>
         }
-        ListEmptyComponent={<Text style={styles.empty}>No transactions yet.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('home.empty')}</Text>}
         renderItem={({ item }) => <TransactionItem row={item} />}
         ListFooterComponent={
-          <View style={{ marginTop: 24 }}>
-            <Button title="Log out" variant="secondary" onPress={signOut} testID="logout" />
+          <View style={{ marginTop: 24, gap: 12 }}>
+            <Button title={t('home.settings')} variant="secondary" onPress={() => router.push('/settings')} testID="settings-button" />
+            <Button title={t('common.logOut')} variant="secondary" onPress={signOut} testID="logout" />
           </View>
         }
       />
@@ -79,25 +95,28 @@ export default function Home() {
 }
 
 function TransactionItem({ row }: { row: TransactionRow }) {
+  const { t, money, dateTime } = useI18n();
   const out = row.direction === 'OUT';
+  const fallback = row.type === 'TOPUP' ? t('txn.topup') : row.type === 'CASHOUT' ? t('txn.cashout')
+    : row.type === 'FEE' ? t('txn.fee') : row.type === 'TRANSFER' ? t(out ? 'txn.transfer' : 'txn.transferIn') : t('txn.payment');
   return (
     <Pressable
       style={styles.row}
       onPress={() => router.push(`/receipt/${row.id}`)}
       testID="txn-row"
       accessibilityRole="button"
-      accessibilityLabel={`${out ? 'Paid' : 'Received'} ${formatTaka(Number(row.amount))} ${out ? 'to' : 'from'} ${row.counterparty_name ?? ''}`}>
+      accessibilityLabel={t(out ? 'txn.a11yOut' : 'txn.a11yIn', { amount: money(Number(row.amount)), name: row.counterparty_name ?? fallback })}>
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={styles.rowTitle}>
-          {row.counterparty_name ?? (row.type === 'TOPUP' ? 'Top-up' : row.type === 'CASHOUT' ? 'Cash out' : 'Payment')}
+          {row.counterparty_name ?? fallback}
         </Text>
         <Text style={styles.rowMeta}>
-          {formatDateTime(row.created_at)} · {row.status}
+          {dateTime(row.created_at)} · {t(`status.${row.status}`)}
         </Text>
       </View>
       <Text style={[styles.rowAmount, { color: out ? colors.text : colors.success }]}>
         {out ? '−' : '+'}
-        {formatTaka(Number(row.amount))}
+        {money(Number(row.amount))}
       </Text>
     </Pressable>
   );
@@ -107,6 +126,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, width: '100%', maxWidth: 480, alignSelf: 'center' },
   header: { gap: 16, marginBottom: 8 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  action: { flexBasis: '48%', flexGrow: 1 },
   balanceCard: { backgroundColor: colors.primary, borderRadius: 16, padding: 20, gap: 4 },
   balanceLabel: { color: '#D7F0E6', fontSize: 14 },
   balance: { color: '#FFFFFF', fontSize: 32, fontWeight: '700' },

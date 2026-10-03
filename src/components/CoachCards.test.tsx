@@ -91,7 +91,7 @@ describe('TC-P3-LLM-05: ask the coach', () => {
     expect(screen.getByTestId('ask-submit').props.accessibilityState).toMatchObject({ disabled: true });
     await fireEvent.changeText(screen.getByTestId('ask-input'), '  Which stock should I buy?  ');
     await fireEvent.press(screen.getByTestId('ask-submit'));
-    expect(ask).toHaveBeenCalledWith('Which stock should I buy?');
+    expect(ask).toHaveBeenCalledWith('Which stock should I buy?', 'en');
     expect(await screen.findByTestId('ask-answer')).toHaveTextContent(/can't recommend specific investments/);
   });
 });

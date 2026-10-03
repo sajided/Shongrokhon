@@ -3,15 +3,20 @@
 Project Shongrokhon is an MFS wallet with an AI financial coach.
 - Product spec: `unified_mfs_ai_financial_coach_prd.md`.
 - Test plan: `testcase.md`, with test IDs like `TC-P1-PAY-01`.
-- Results: `docs/phase1-test-matrix.md`, `docs/phase2-test-matrix.md`, `docs/phase3-test-matrix.md`. Update the matrix whenever tests change.
-- How to run the tests (automated + manual walkthrough): `docs/phase2-testing.md`, `docs/phase3-testing.md`.
+- Results: `docs/phase1-test-matrix.md` … `docs/phase4-test-matrix.md`. Update the matrix whenever tests change.
+- How to run the tests (automated + manual walkthrough): `docs/phase2-testing.md`, `docs/phase3-testing.md`, `docs/phase4-testing.md`. Security review: `docs/security-review.md`.
 
 ## Scope
 - **Web app only.** Expo SDK 57 renders to the web through react-native-web, using expo-router with `web.output: "single"` (SPA). Do not add iOS/Android code, native config plugins, EAS, or Maestro.
 - **Phase 1 is done:** auth, ledger, Bangla QR, payments.
 - **Phase 2 is done:** ML risk scoring in the payment flow (scan → score → execute/flag), ring detection.
 - **Phase 3 is done:** AI coach (Claude via the `coach` Edge Function, not Next.js), coach dashboard, savings planner, cash-flow forecast.
-- **Phase 4 is not started:** Smart Spending Companion, Investigation Assistant, Bangla localization.
+- **Phase 4 is done:**
+  - Money flows: cash-out at agents, send money, bill pay.
+  - Smart Spending Companion.
+  - AI Investigation Assistant: a separate `admin/` Vite app, SHAP via ML `/explain`, and the `investigate` function.
+  - Bangla UI and coach.
+  - Analytics, account deletion, the authorization sweep, and the perf scripts.
 - **Expo APIs change between SDK releases.** Check the versioned docs (`https://docs.expo.dev/versions/v57.0.0/`) or the `.d.ts` in `node_modules` before using one. Don't rely on memory.
 
 ## Layout
@@ -26,12 +31,19 @@ Project Shongrokhon is an MFS wallet with an AI financial coach.
   - `forecast.ts` (cash-flow forecast), `savings.ts` (goal plans): pure, client-side, backtested by `scripts/backtest-forecast.ts`.
   - `api.ts`: typed RPC wrappers; `callFunction` for Edge Functions.
   - `errors.ts`.
-- `src/components/`: UI. `ui.tsx` holds the shared primitives and color tokens.
+- `src/components/`: UI. `ui.tsx` holds the shared primitives, colour tokens, and the `Text` component: use it, never react-native's `Text`, so Bangla gets Noto Sans Bengali.
+- `src/i18n/`: `en.ts` is the key set; `bn.ts` is typed against it.
+  - Components use `useI18n()`: `t`, `msg`, `money`, `dateTime`, `day`, `ordinal`.
+  - Never hard-code UI text: `scripts/check-i18n.ts` runs in `npm test` and fails on it.
+  - Notifications are rendered from `kind` + `data` (`noticeText`), not from the SQL English text.
+- `admin/`: Investigation Assistant for analysts (Vite + React, its own `package.json`, Vitest).
+  - It reads the root `.env` through `envPrefix`.
+  - Staff sign in by email. `scripts/create-analyst.ts` creates staff; seeded local analyst: `analyst@shongrokhon.test` / `analyst-pass-123`.
 - `supabase/`:
   - `migrations/`, `seed.sql` (test personas)
   - `tests/*.test.sql` (pgTAP)
   - `seed_history.sql`: Phase 2 personas with backdated history. **Generated** by `ml/shongrokhon_ml/seed_export.py`; don't hand-edit.
-  - `functions/otp/`, `functions/pay/`, `functions/coach/` (Deno Edge Functions). Every module except `index.ts` is pure and Jest-tested (`pay/score.ts`, `coach/*.ts`). Pure modules import each other with `.ts` extensions; the Anthropic SDK is passed into `coach/anthropic.ts` from `index.ts` (`npm:` import).
+  - `functions/otp/`, `functions/pay/`, `functions/coach/`, `functions/investigate/` (Deno Edge Functions). Shared LLM code: `functions/_shared/llm/` (provider interface, Anthropic adapter, grounding, PII scrubbing). Every module except `index.ts` is pure and Jest-tested (`pay/score.ts`, `coach/*.ts`). Pure modules import each other with `.ts` extensions; the Anthropic SDK is passed into `coach/anthropic.ts` from `index.ts` (`npm:` import).
 - `ml/`: Python (FastAPI, XGBoost, Isolation Forest, networkx). Runs only in Docker (xgboost needs libomp on macOS).
   - `shongrokhon_ml/`: `synth` (synthetic data), `features` (must match SQL), `train`, `evaluate` (gates), `model`, `service`, `network` (ring job), `parity`, `seed_export`.
   - `artifacts/` (committed models + `metadata.json`), `reports/metrics.json`, `tests/` (pytest), `bench/latency.py`.
@@ -53,6 +65,10 @@ npm run ml:train               # retrain, evaluate gates, regenerate parity test
 npm run ml:seed                # regenerate seed_history.sql only (after editing seed_export.py)
 npm run ml:network             # run the ring-detection job once
 npm run ml:bench               # 1,000 sequential /score requests (MLAPI-05)
+npm run check:i18n             # no hard-coded UI text (also runs inside npm test)
+npm --prefix admin test        # admin app (Vitest); `npm --prefix admin run dev` serves it on :8766
+npx tsx scripts/perf/payments.ts --sequential 1000   # PERF-01; --concurrency 50 --duration 180 for PERF-02 (then supabase db reset)
+npx tsx scripts/eval-phase4.ts # live Bangla coach + investigation summary gates (costs money)
 npx tsx scripts/backtest-forecast.ts   # FCST-03 forecast backtest
 npx tsx scripts/eval-coach.ts          # live LLM gates (LLM-01/04/05/06/09); needs ANTHROPIC_API_KEY, costs money
 ```
@@ -71,6 +87,14 @@ npx tsx scripts/eval-coach.ts          # live LLM gates (LLM-01/04/05/06/09); ne
   - Every money movement goes through a `SECURITY DEFINER` function with `set search_path = ''`.
   - The current ones are `make_payment`, and the service-role-only `admin_credit_wallet` and `admin_cashout`.
   - All of them post a balanced DEBIT/CREDIT pair via `private.post_transfer`.
+- **Cash-out, send money and bill pay** follow the `make_payment` rules:
+  - `make_cashout` / `make_transfer` share `private.make_flow`, take a fee pair (`FEE`, derived idempotency key), and are scored by SQL rules (`flow_score`, `risk_scores.source = 'RULES'`) in `pay`.
+  - Bill pay is `make_payment` to a merchant with a `biller_category`.
+- **Staff vs customers:**
+  - Customers are phone-only. Public email sign-up is refused in `private.handle_new_auth_user`.
+  - Staff have `app_metadata.staff = true` and a `public.staff` row, and no wallet.
+  - Analyst RPCs call `private.require_analyst()` first.
+  - `tests/integration/authz-sweep.test.ts` pins the set of customer-callable functions: a new grant fails it until reviewed.
 - **Every new user-facing RPC must:**
   - Call `private.require_session()` first. This returns HTTP 401 `PT401` for revoked sessions.
   - Be revoked from `public, anon, authenticated`, then granted explicitly. Supabase grants EXECUTE by default.
@@ -106,18 +130,28 @@ npx tsx scripts/eval-coach.ts          # live LLM gates (LLM-01/04/05/06/09); ne
   - `01711000001` U-NORMAL (৳5,000, six months of history), `…02` U-LOW (৳100), `…03`–`…09` unregistered.
   - `01811000001` M-LEGIT (`MLEGIT0001`); `…02`/`…03` M-LEGIT2/3; `…11` M-PSEUDO (`MPSEUDO01`); `…12`/`…13` M-PSEUDO2/3.
   - `01911000001` U-ABUSER (৳20,000), `…02` U-NEW (৳0), `…03`–`…10` RING-01 (৳5,000 each).
-  - Phase 3: `01611000001` U-CASHHEAVY (৳3,000), `…02` U-TIGHT (rent due it can't cover), `…03` U-BULK (2,000+ payments). Merchants `01811000021`–`28`: M-GROCER, M-RENT, M-UTIL, M-RIDE, M-BANK (SAVINGS), M-CAFE, M-FASHION, M-INJECT (prompt-injection name).
+  - Phase 3: `01611000001` U-CASHHEAVY (৳3,000), `…02` U-TIGHT (rent due it can't cover), `…03` U-BULK (2,000+ payments).
+  - Phase 4: agents `AGENT001`/`AGENT002`; billers `MGAS0001`, `MNET0001`, `MWATER001`, `MMOBILE01` (plus `MRENT0001`, `MUTIL0001`). U-CASHHEAVY cashes out at the agents.
+  - `0171100000x` numbers are shared by auth tests: tests that need a throwaway customer create one with `admin.auth.admin.createUser({ phone, password })`. Merchants `01811000021`–`28`: M-GROCER, M-RENT, M-UTIL, M-RIDE, M-BANK (SAVINGS), M-CAFE, M-FASHION, M-INJECT (prompt-injection name).
   - U-NORMAL has a ৳28,000 monthly salary, rent and bank transfers; its balance still ends at ৳5,000.
 - **Tests about ledger semantics, not risk,** pin decisions with `setRiskConfig(ALWAYS_ALLOW)` (tests/integration/helpers.ts) and restore after. Bursts of payments are velocity anomalies by design.
   - GoTrue allows one SMS per number every ~5 s. Test helpers retry once after 6 s.
 - **Element lookup:** `testID` becomes `data-testid` on web. Playwright and RNTL both look elements up by test ID.
 - **Env vars:** `EXPO_PUBLIC_*` values are inlined only when read as `process.env.EXPO_PUBLIC_X` (see `src/lib/config.ts`). Metro caches the inlined values; use `expo export --clear` after changing `.env`.
 - **Keys:** never put the service-role key or an `sb_secret_` key in `.env` or anywhere the app imports.
+- **CSP (`public/index.html`):** any new origin the app connects to must be added to `connect-src`. The QR decoder's WebAssembly is served from `public/zxing/`, which `npm install` creates (`scripts/copy-zxing.mjs`, gitignored); a CDN is not allowed.
 
 ## Known open items
 - Phase 1 still needs a manual run in a real phone browser: PAY-01, QR-08 and QR-09.
 - GoTrue's direct `/auth/v1/verify` endpoint bypasses the OTP lockout. Only the per-IP rate limit protects it.
-- The session token is stored in `localStorage`. Add a strict CSP when the app is deployed.
+- The session token is stored in `localStorage`; both apps ship a strict CSP (`public/index.html`, `admin/index.html`). When deployed, also send it as a header, with `frame-ancestors 'none'` and HSTS.
 - Phase 2 models are trained on synthetic data (`ml/shongrokhon_ml/synth.py`). Their metrics validate the pipeline, not real-world accuracy; retrain on real labelled data before production.
 - Ring alerts flag wallets but do not notify ring members (to avoid tipping them off). Analyst review is Phase 4.
-- Coach text is English; Bangla prompts and UI are Phase 4. After changing `coach/prompts.ts` or `COACH_MODEL`, re-run `scripts/eval-coach.ts` (live, costs money) and bump `PROMPT_VERSION`.
+- After changing `coach/prompts.ts`, `investigate/evidence.ts` prompts or `COACH_MODEL`, re-run `scripts/eval-coach.ts` and `scripts/eval-phase4.ts` (live, cost money) and bump `PROMPT_VERSION`.
+- Release items still needing people or hardware:
+  - L10N-06 native-speaker sign-off;
+  - real-device E2E-06;
+  - PERF-02 at full scale;
+  - TLS and headers on the deployed host;
+  - MET-03 A/B with real users.
+- The Expo toolchain carries npm-audit advisories (build-time only, not in the bundle); upgrade Expo with the next SDK.

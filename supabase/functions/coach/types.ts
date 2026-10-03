@@ -14,10 +14,21 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   HEALTH: 'Health', EDUCATION: 'Education', SAVINGS: 'Savings', CASH_OUT: 'Cash-out', OTHERS: 'Others',
 };
 
+export type Lang = 'en' | 'bn';
+export const LANGS: readonly Lang[] = ['en', 'bn'];
+
+export const CATEGORY_LABELS_BN: Record<Category, string> = {
+  FOOD: 'খাবার', TRANSPORT: 'যাতায়াত', UTILITIES: 'ইউটিলিটি', BILLS: 'বিল ও বাসাভাড়া', SHOPPING: 'কেনাকাটা',
+  HEALTH: 'স্বাস্থ্য', EDUCATION: 'শিক্ষা', SAVINGS: 'সঞ্চয়', CASH_OUT: 'ক্যাশ আউট', OTHERS: 'অন্যান্য',
+};
+
 export type Period = 'WEEK' | 'MONTH' | '3M';
 export const PERIODS: readonly Period[] = ['WEEK', 'MONTH', '3M'];
 export const PERIOD_LABELS: Record<Period, string> = {
   WEEK: 'the last 7 days', MONTH: 'the last 30 days', '3M': 'the last 3 months',
+};
+export const PERIOD_LABELS_BN: Record<Period, string> = {
+  WEEK: 'গত ৭ দিনে', MONTH: 'গত ৩০ দিনে', '3M': 'গত ৩ মাসে',
 };
 
 export type CashLevel = 'LOW' | 'MEDIUM' | 'HIGH';

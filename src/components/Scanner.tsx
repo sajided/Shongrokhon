@@ -1,9 +1,12 @@
 import { CameraView, scanFromURLAsync, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { Body, Button, colors, ErrorBanner, Title } from './ui';
+import { useI18n } from '@/i18n/LocaleProvider';
+import { prepareQrDecoder } from '@/lib/qr/decoder';
+
+import { Body, Button, colors, ErrorBanner, Text, Title } from './ui';
 
 interface ScannerProps {
   /** Called once per activation with the raw QR text. */
@@ -18,6 +21,7 @@ interface ScannerProps {
  * the camera reports while the code stays in view.
  */
 export function Scanner({ onPayload, active }: ScannerProps) {
+  const { t } = useI18n();
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
   const [galleryError, setGalleryError] = useState<string | null>(null);
@@ -36,6 +40,11 @@ export function Scanner({ onPayload, active }: ScannerProps) {
     if (active) handled.current = false;
   }, [active]);
 
+  // Point the decoder at our own copy of its WebAssembly before the camera starts.
+  useEffect(() => {
+    void prepareQrDecoder();
+  }, []);
+
   const emit = useCallback(
     (data: string) => {
       if (!active || handled.current) return;
@@ -49,10 +58,11 @@ export function Scanner({ onPayload, active }: ScannerProps) {
     setGalleryError(null);
     const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
     if (picked.canceled || !picked.assets[0]) return;
+    await prepareQrDecoder();
     const codes = await scanFromURLAsync(picked.assets[0].uri, ['qr']);
     if (codes[0]?.data) emit(codes[0].data);
-    else setGalleryError('No QR code found in that image.');
-  }, [emit]);
+    else setGalleryError(t('scan.noQr'));
+  }, [emit, t]);
 
   if (!permission) {
     return (
@@ -66,13 +76,10 @@ export function Scanner({ onPayload, active }: ScannerProps) {
     // TC-P1-QR-02: explain how to re-enable the camera, never crash. Gallery import still works.
     return (
       <View style={styles.permission} testID="camera-permission-denied">
-        <Title>Camera access needed</Title>
-        <Body>
-          Shongrokhon uses the camera only to scan Bangla QR codes for payments. Allow camera access for this site in
-          your browser (the camera or lock icon in the address bar), then try again. You can also upload a QR image.
-        </Body>
-        <Button title="Try again" onPress={requestPermission} testID="allow-camera" />
-        <Button title="Upload QR image" variant="secondary" onPress={pickFromGallery} testID="gallery" />
+        <Title>{t('scan.permissionTitle')}</Title>
+        <Body>{t('scan.permissionBody')}</Body>
+        <Button title={t('common.tryAgain')} onPress={requestPermission} testID="allow-camera" />
+        <Button title={t('scan.upload')} variant="secondary" onPress={pickFromGallery} testID="gallery" />
         <ErrorBanner message={galleryError} />
       </View>
     );
@@ -90,16 +97,16 @@ export function Scanner({ onPayload, active }: ScannerProps) {
       />
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.frame} />
-        <Text style={styles.hint}>Point the camera at a Bangla QR code</Text>
+        <Text style={styles.hint}>{t('scan.hint')}</Text>
         <ErrorBanner message={galleryError} />
         <View style={styles.actions}>
           <Button
-            title={torch ? 'Torch off' : 'Torch on'}
+            title={torch ? t('scan.torchOff') : t('scan.torchOn')}
             variant="secondary"
             onPress={() => setTorch((t) => !t)}
             testID="torch"
           />
-          <Button title="Upload image" variant="secondary" onPress={pickFromGallery} testID="gallery" />
+          <Button title={t('scan.uploadShort')} variant="secondary" onPress={pickFromGallery} testID="gallery" />
         </View>
       </View>
     </View>

@@ -66,9 +66,19 @@ describe('submitPayment', () => {
   });
 
   it('does not retry business errors', async () => {
-    const d = deps({ pay: jest.fn().mockRejectedValue(new ApiError('INTERNAL_ERROR')) });
-    await expect(submitPayment(req, d)).rejects.toThrow('INTERNAL_ERROR');
+    const d = deps({ pay: jest.fn().mockRejectedValue(new ApiError('MERCHANT_NOT_FOUND')) });
+    await expect(submitPayment(req, d)).rejects.toThrow('MERCHANT_NOT_FOUND');
     expect(d.waitForOnline).not.toHaveBeenCalled();
+  });
+
+  it('TC-P4-PERF-02: a server error with no business code is recovered like a lost connection', async () => {
+    const pay = jest.fn<Promise<PaymentResponse>, [PaymentRequest]>()
+      .mockRejectedValueOnce(new ApiError('INTERNAL_ERROR')).mockResolvedValueOnce(success);
+    const d = deps({ pay });
+    await expect(submitPayment(req, d)).resolves.toEqual(success);
+    expect(d.status).toHaveBeenCalledWith('key-1');
+    expect(pay).toHaveBeenCalledTimes(2);
+    expect(pay.mock.calls[1][0].idempotencyKey).toBe('key-1');
   });
 
   it('gives up after maxRecoveries', async () => {

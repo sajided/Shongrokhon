@@ -2,13 +2,14 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { Body, Button, ErrorBanner, Field, Screen, Title } from '@/components/ui';
+import { useI18n } from '@/i18n/LocaleProvider';
 import { ApiError } from '@/lib/api';
 import { sendOtp, verifyOtp } from '@/lib/auth';
-import { messageFor } from '@/lib/messages';
 import { isValidOtp } from '@/lib/validation';
 
 export default function Verify() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { t, msg } = useI18n();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +17,7 @@ export default function Verify() {
   const [info, setInfo] = useState<string | null>(null);
 
   const submit = async () => {
-    if (!isValidOtp(code)) return setError(messageFor('INVALID_OTP_FORMAT'));
+    if (!isValidOtp(code)) return setError(msg('INVALID_OTP_FORMAT'));
     setError(null);
     setInfo(null);
     setBusy(true);
@@ -25,7 +26,7 @@ export default function Verify() {
       await verifyOtp(phone, code);
     } catch (e) {
       const err = e instanceof ApiError ? e : null;
-      setError(messageFor(err?.code, err?.details as { attempts_left?: number }));
+      setError(msg(err?.code, err?.details as { attempts_left?: number }));
       setCanResend(err?.code === 'OTP_EXPIRED' || err?.code === 'OTP_NOT_REQUESTED');
       setCode('');
     } finally {
@@ -39,9 +40,9 @@ export default function Verify() {
       await sendOtp(phone);
       setError(null);
       setCanResend(false);
-      setInfo('A new code has been sent.');
+      setInfo(t('verify.resent'));
     } catch (e) {
-      setError(messageFor(e instanceof ApiError ? e.code : null));
+      setError(msg(e instanceof ApiError ? e.code : null));
     } finally {
       setBusy(false);
     }
@@ -49,10 +50,10 @@ export default function Verify() {
 
   return (
     <Screen>
-      <Title>Enter the code</Title>
-      <Body muted>We sent a 6-digit code to {phone}.</Body>
+      <Title>{t('verify.title')}</Title>
+      <Body muted>{t('verify.body', { phone })}</Body>
       <Field
-        label="Verification code"
+        label={t('verify.code')}
         testID="otp-input"
         value={code}
         onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
@@ -63,8 +64,8 @@ export default function Verify() {
       />
       {info && <Body muted>{info}</Body>}
       <ErrorBanner message={error} />
-      <Button title="Verify" onPress={submit} busy={busy} testID="verify-otp" />
-      {canResend && <Button title="Resend code" variant="secondary" onPress={resend} testID="resend-otp" />}
+      <Button title={t('verify.submit')} onPress={submit} busy={busy} testID="verify-otp" />
+      {canResend && <Button title={t('verify.resend')} variant="secondary" onPress={resend} testID="resend-otp" />}
     </Screen>
   );
 }

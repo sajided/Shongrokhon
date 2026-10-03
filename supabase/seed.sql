@@ -48,3 +48,26 @@ select public.admin_credit_wallet(w.id, 5000, 'Opening balance')
   from public.wallets w where w.user_id = '11111111-1111-1111-1111-000000000001' and w.kind = 'customer';
 select public.admin_credit_wallet(w.id, 100, 'Opening balance')
   from public.wallets w where w.user_id = '11111111-1111-1111-1111-000000000002' and w.kind = 'customer';
+
+-- Phase 4: a compliance analyst for the Investigation Assistant (admin/ app).
+--   analyst@shongrokhon.test / analyst-pass-123   (local development and tests only)
+-- Staff accounts carry app_metadata.staff = true, so they get no customer wallet.
+insert into auth.users (
+  instance_id, id, aud, role, email, email_confirmed_at, encrypted_password,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change,
+  phone_change, phone_change_token, email_change_token_current, reauthentication_token
+) values (
+  '00000000-0000-0000-0000-000000000000', '66666666-6666-6666-6666-000000000001', 'authenticated', 'authenticated',
+  'analyst@shongrokhon.test', now(), extensions.crypt('analyst-pass-123', extensions.gen_salt('bf', 8)),
+  '{"provider":"email","providers":["email"],"staff":true}', '{}', now(), now(),
+  '', '', '', '', '', '', '', ''
+) on conflict (id) do nothing;
+insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
+values (gen_random_uuid(), '66666666-6666-6666-6666-000000000001', '66666666-6666-6666-6666-000000000001', 'email',
+        jsonb_build_object('sub', '66666666-6666-6666-6666-000000000001', 'email', 'analyst@shongrokhon.test',
+                           'email_verified', true),
+        now(), now(), now())
+on conflict do nothing;
+insert into public.staff (user_id, email) values ('66666666-6666-6666-6666-000000000001', 'analyst@shongrokhon.test')
+on conflict (user_id) do nothing;

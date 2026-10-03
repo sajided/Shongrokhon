@@ -1,5 +1,5 @@
 import type { PaymentRequest, PaymentResponse } from './api';
-import { NetworkError } from './errors';
+import { ApiError, NetworkError } from './errors';
 
 export interface PaymentFlowDeps {
   pay: (req: PaymentRequest) => Promise<PaymentResponse>;
@@ -16,6 +16,9 @@ export interface PaymentFlowDeps {
  * network, asks the server what happened to this idempotency key, and only
  * re-submits (with the same key) when the server never saw the request.
  * The server guarantees at most one debit per key.
+ * A server error without a business code (e.g. a function worker shut down
+ * mid-request under load, TC-P4-PERF-02) leaves the outcome just as unknown,
+ * so it is recovered the same way.
  */
 export async function submitPayment(req: PaymentRequest, deps: PaymentFlowDeps): Promise<PaymentResponse> {
   const maxRecoveries = deps.maxRecoveries ?? 5;
@@ -29,11 +32,15 @@ export async function submitPayment(req: PaymentRequest, deps: PaymentFlowDeps):
       if (status.status !== 'NOT_FOUND') return status;
       mustSubmit = true;
     } catch (e) {
-      if (!(e instanceof NetworkError) || recoveries >= maxRecoveries) throw e;
+      if (!outcomeUnknown(e) || recoveries >= maxRecoveries) throw e;
       recoveries += 1;
       mustSubmit = false;
       deps.onChecking?.();
       await deps.waitForOnline();
     }
   }
+}
+
+function outcomeUnknown(e: unknown): boolean {
+  return e instanceof NetworkError || (e instanceof ApiError && e.code === 'INTERNAL_ERROR');
 }

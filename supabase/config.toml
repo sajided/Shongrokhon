@@ -197,6 +197,10 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
+# Must stay on: in this CLI it also enables email *logins*, which staff use.
+# Public email sign-ups are refused by private.handle_new_auth_user instead:
+# customers are phone-only and staff are created with the service role
+# (scripts/create-analyst.ts), TC-P4-INV-01.
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
@@ -440,4 +444,10 @@ verify_jwt = false
 # come from supabase/functions/.env; app_config.coach_llm_mode switches between
 # the live model, the deterministic mock (tests) and off.
 [functions.coach]
+verify_jwt = false
+
+# AI Investigation Assistant (Phase 4): analysts only. The alert is read as the
+# caller (analyst_get_alert enforces the analyst role in SQL); SHAP from the ML
+# service, evidence summary from the LLM (same keys and mode as `coach`).
+[functions.investigate]
 verify_jwt = false

@@ -2,14 +2,43 @@ import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  Text as RNText,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
   type TextInputProps,
+  type TextProps,
+  type TextStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useI18n } from '@/i18n/LocaleProvider';
+
+/** Loaded in src/app/_layout.tsx (useFonts). */
+export const BANGLA_FONT = { regular: 'NotoSansBengali_400Regular', bold: 'NotoSansBengali_700Bold' };
+
+/**
+ * Bangla mode: Noto Sans Bengali and a taller line height, so conjuncts
+ * (যুক্তাক্ষর) and vowel signs are never clipped (TC-P4-L10N-03).
+ */
+export function banglaStyle(style: TextProps['style']): TextStyle {
+  const flat = (StyleSheet.flatten(style) ?? {}) as TextStyle;
+  const weight = flat.fontWeight === 'bold' ? 700 : Number(flat.fontWeight ?? 400);
+  const size = flat.fontSize ?? 14;
+  return {
+    fontFamily: weight >= 600 ? BANGLA_FONT.bold : BANGLA_FONT.regular,
+    fontWeight: 'normal',
+    lineHeight: Math.max(flat.lineHeight ?? 0, Math.round(size * 1.5)),
+  };
+}
+
+/** Use instead of react-native's Text so Bangla gets the right font. */
+export function Text(props: TextProps) {
+  const { locale } = useI18n();
+  if (locale !== 'bn') return <RNText {...props} />;
+  return <RNText {...props} style={[props.style, banglaStyle(props.style)]} />;
+}
 
 export const colors = {
   primary: '#0B6E4F',
@@ -48,8 +77,8 @@ export function Title({ children }: { children: ReactNode }) {
   );
 }
 
-export function Body({ children, muted }: { children: ReactNode; muted?: boolean }) {
-  return <Text style={[styles.body, muted && { color: colors.muted }]}>{children}</Text>;
+export function Body({ children, muted, testID }: { children: ReactNode; muted?: boolean; testID?: string }) {
+  return <Text style={[styles.body, muted && { color: colors.muted }]} testID={testID}>{children}</Text>;
 }
 
 export function Button({
@@ -91,6 +120,7 @@ export function Button({
 }
 
 export function Field({ label, ...props }: TextInputProps & { label: string }) {
+  const { locale } = useI18n();
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -98,7 +128,8 @@ export function Field({ label, ...props }: TextInputProps & { label: string }) {
         accessibilityLabel={label}
         placeholderTextColor={colors.muted}
         {...props}
-        style={[styles.input, props.editable === false && styles.inputReadOnly, props.style]}
+        style={[styles.input, props.editable === false && styles.inputReadOnly, locale === 'bn' && { fontFamily: BANGLA_FONT.regular },
+                props.style]}
       />
     </View>
   );

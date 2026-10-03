@@ -4,7 +4,7 @@
 // falls back to keyword rules. A merchant name that tries to instruct the
 // model can at worst get a wrong category (TC-P3-MW-06).
 
-import { scrubPII } from './sanitize.ts';
+import { scrubPII } from '../_shared/llm/sanitize.ts';
 import { MERCHANT_CATEGORIES, type Category } from './types.ts';
 
 const RULES: [RegExp, Category][] = [

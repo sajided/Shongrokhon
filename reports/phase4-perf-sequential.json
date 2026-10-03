@@ -1,0 +1,26 @@
+{
+  "mode": "sequential 1000",
+  "payments": 1000,
+  "throughput_per_s": 10.3,
+  "p50_ms": 95,
+  "p95_ms": 114,
+  "p99_ms": 369,
+  "max_ms": 421,
+  "error_rate": 0,
+  "errors_by_code": {},
+  "decisions": {
+    "ALLOW": 11,
+    "REVIEW": 889,
+    "FLAG": 100
+  },
+  "reconcile": {
+    "wallets": 86,
+    "mismatches": [],
+    "ledger_imbalance": 0,
+    "mismatched_wallets": 0,
+    "unpaired_transactions": 0
+  },
+  "sla_ms": 1500,
+  "pass": true,
+  "note": "Local Docker stack on a laptop; production numbers need production-like hardware."
+}

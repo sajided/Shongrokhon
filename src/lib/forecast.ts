@@ -18,6 +18,8 @@ export interface CashRow {
   amount: number;
   key: string;
   name: string | null;
+  /** Billers only (Phase 4): lets a warning link straight to bill pay. */
+  merchant_id?: string | null;
 }
 
 export interface CashHistory {
@@ -37,12 +39,14 @@ export interface Recurring {
   intervalDays: number;
   nextDue: string; // YYYY-MM-DD (Dhaka)
   occurrences: number;
+  /** Set for billers, see CashRow.merchant_id. */
+  merchantId?: string;
 }
 
 export interface ForecastDay {
   date: string; // YYYY-MM-DD (Dhaka)
   balance: number;
-  events: { name: string; amount: number }[]; // + in, - out
+  events: { name: string; amount: number; merchantId?: string }[]; // + in, - out
 }
 
 export interface Forecast {
@@ -60,7 +64,7 @@ export interface Forecast {
     balance: number;
     threshold: number;
     /** The recurring payment due that day, if any. */
-    cause: { name: string; amount: number } | null;
+    cause: { name: string; amount: number; merchantId?: string } | null;
     /** Top up this much before `date` to stay at the threshold for the whole horizon. */
     topUp: number;
     /** Or spend this much less per day until `date`. */
@@ -126,6 +130,7 @@ export function detectRecurring(rows: CashRow[], today: number): { items: Recurr
       intervalDays: Math.round(interval),
       nextDue: dayString(next),
       occurrences: sorted.length,
+      ...(r0.merchant_id ? { merchantId: r0.merchant_id } : {}),
     });
     sorted.forEach((r) => rowsUsed.add(r));
   }
@@ -156,7 +161,7 @@ export function forecast(history: CashHistory, horizonDays = 30): Forecast {
     const first = Math.floor(Date.parse(item.nextDue) / DAY_MS);
     for (let d = first; d <= today + horizonDays; d += item.intervalDays) {
       const amount = item.direction === 'IN' ? item.amount : -item.amount;
-      due.set(d, [...(due.get(d) ?? []), { name: item.name, amount }]);
+      due.set(d, [...(due.get(d) ?? []), { name: item.name, amount, ...(item.merchantId ? { merchantId: item.merchantId } : {}) }]);
     }
   }
 
@@ -179,7 +184,7 @@ export function forecast(history: CashHistory, horizonDays = 30): Forecast {
       date: low.date,
       balance: low.balance,
       threshold,
-      cause: bill ? { name: bill.name, amount: -bill.amount } : null,
+      cause: bill ? { name: bill.name, amount: -bill.amount, ...(bill.merchantId ? { merchantId: bill.merchantId } : {}) } : null,
       topUp: Math.ceil(threshold - min.balance),
       dailyCut: Math.ceil((threshold - low.balance) / (lowIndex + 1)),
     };

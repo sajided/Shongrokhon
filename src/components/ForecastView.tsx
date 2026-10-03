@@ -1,37 +1,48 @@
 // Cash-flow forecast (TC-P3-FCST-*): projected balance per day, a low-balance
 // warning with an action, upcoming recurring items, and a low-confidence note.
+// Phase 4: a bill behind the warning can be paid right away (TC-P4-E2E-04).
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import type { Forecast } from '@/lib/forecast';
-import { formatTaka } from '@/lib/format';
+import { useI18n, type I18n } from '@/i18n/LocaleProvider';
+import type { Forecast, Recurring } from '@/lib/forecast';
 
 import { coachStyles } from './CoachCards';
-import { colors } from './ui';
+import { Button, colors, Text } from './ui';
 
-const shortDate = (date: string) =>
-  new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+function recurringName(r: Pick<Recurring, 'key' | 'name'>, t: I18n['t']) {
+  if (r.key === 'INCOME') return t('forecast.income');
+  if (r.key === 'CASH_OUT') return t('forecast.cashout');
+  return r.name;
+}
 
-export function LowBalanceWarning({ warning }: { warning: NonNullable<Forecast['warning']> }) {
+export function LowBalanceWarning({ warning, onPayBill }: {
+  warning: NonNullable<Forecast['warning']>;
+  /** Pay the bill behind the warning now (bill pay, pre-filled). */
+  onPayBill?: (merchantId: string) => void;
+}) {
+  const { t, money, day } = useI18n();
+  const cause = warning.cause;
   return (
     <View style={[coachStyles.card, styles.warning]} testID="low-balance-warning" accessibilityRole="alert">
-      <Text style={[coachStyles.cardTitle, { color: colors.warning }]}>
-        ⚠ Low balance expected on {shortDate(warning.date)}
-      </Text>
+      <Text style={[coachStyles.cardTitle, { color: colors.warning }]}>{t('forecast.lowTitle', { date: day(warning.date) })}</Text>
       <Text style={coachStyles.body}>
-        {warning.cause
-          ? `${warning.cause.name} (${formatTaka(warning.cause.amount)}) is due that day and your balance may drop to ${formatTaka(warning.balance)}.`
-          : `Your balance may drop to ${formatTaka(warning.balance)}.`}
+        {cause
+          ? t('forecast.lowCause', { name: cause.name, amount: money(cause.amount), balance: money(warning.balance) })
+          : t('forecast.lowNoCause', { balance: money(warning.balance) })}
       </Text>
       <Text style={coachStyles.body} testID="warning-action">
-        To stay above {formatTaka(warning.threshold)}: add {formatTaka(warning.topUp)} before then, or spend about{' '}
-        {formatTaka(warning.dailyCut)} less each day. Planning ahead avoids a last-minute cash-out.
+        {t('forecast.lowAction', { threshold: money(warning.threshold), topUp: money(warning.topUp), dailyCut: money(warning.dailyCut) })}
       </Text>
+      {cause?.merchantId && onPayBill && (
+        <Button title={t('forecast.payNow', { name: cause.name })} onPress={() => onPayBill(cause.merchantId!)} testID="warning-pay-now" />
+      )}
     </View>
   );
 }
 
 export function ForecastChart({ forecast }: { forecast: Forecast }) {
+  const { t, money, day } = useI18n();
   const [horizon, setHorizon] = useState<7 | 30>(30);
   const days = forecast.days.slice(0, horizon);
   const top = Math.max(...days.map((d) => d.balance), 1);
@@ -39,18 +50,19 @@ export function ForecastChart({ forecast }: { forecast: Forecast }) {
   const range = top - bottom;
   const end = days[days.length - 1];
   const min = days.reduce((m, d) => (d.balance < m.balance ? d : m), days[0]);
-  const label = `Projected balance for the next ${horizon} days: ${formatTaka(end.balance)} on ${shortDate(end.date)}. `
-    + `Lowest ${formatTaka(min.balance)} on ${shortDate(min.date)}.`;
+  const label = t('forecast.a11y', {
+    days: horizon, end: money(end.balance), endDate: day(end.date), min: money(min.balance), minDate: day(min.date),
+  });
 
   return (
     <View style={coachStyles.card} testID="forecast-chart">
       <View style={styles.header}>
-        <Text style={coachStyles.cardTitle}>Projected balance</Text>
+        <Text style={coachStyles.cardTitle}>{t('forecast.projected')}</Text>
         <View style={styles.toggle}>
           {([7, 30] as const).map((h) => (
             <Pressable key={h} onPress={() => setHorizon(h)} testID={`horizon-${h}`} accessibilityRole="button"
               accessibilityState={{ selected: horizon === h }} aria-selected={horizon === h} style={[styles.toggleItem, horizon === h && styles.toggleOn]}>
-              <Text style={[styles.toggleText, horizon === h && { color: colors.text }]}>{h} days</Text>
+              <Text style={[styles.toggleText, horizon === h && { color: colors.text }]}>{t('forecast.days', { count: h })}</Text>
             </Pressable>
           ))}
         </View>
@@ -69,15 +81,15 @@ export function ForecastChart({ forecast }: { forecast: Forecast }) {
         })}
       </View>
       <View style={styles.axis}>
-        <Text style={coachStyles.muted}>{shortDate(days[0].date)}</Text>
-        <Text style={coachStyles.muted}>{shortDate(end.date)}</Text>
+        <Text style={coachStyles.muted}>{day(days[0].date)}</Text>
+        <Text style={coachStyles.muted}>{day(end.date)}</Text>
       </View>
       <Text style={coachStyles.body} testID="forecast-end">
-        {formatTaka(end.balance)} expected on {shortDate(end.date)}
+        {t('forecast.end', { amount: money(end.balance), date: day(end.date) })}
       </Text>
       {forecast.shortfall > 0 && (
         <Text style={[coachStyles.body, { color: colors.danger, fontWeight: '700' }]} testID="forecast-shortfall">
-          Shortfall: up to {formatTaka(forecast.shortfall)} below zero
+          {t('forecast.shortfall', { amount: money(forecast.shortfall) })}
         </Text>
       )}
     </View>
@@ -85,33 +97,33 @@ export function ForecastChart({ forecast }: { forecast: Forecast }) {
 }
 
 export function RecurringList({ forecast }: { forecast: Forecast }) {
+  const { t, money, day } = useI18n();
   if (forecast.recurring.length === 0) return null;
   return (
     <View style={coachStyles.card} testID="recurring-list">
-      <Text style={coachStyles.cardTitle}>Coming up</Text>
+      <Text style={coachStyles.cardTitle}>{t('forecast.comingUp')}</Text>
       {forecast.recurring.map((r) => (
         <View key={`${r.direction}-${r.key}`} style={styles.recurring} testID="recurring-item">
           <Text style={coachStyles.body}>
-            {r.name} · {shortDate(r.nextDue)}
+            {recurringName(r, t)} · {day(r.nextDue)}
           </Text>
           <Text style={[coachStyles.body, { color: r.direction === 'IN' ? colors.success : colors.text }]}>
             {r.direction === 'IN' ? '+' : '−'}
-            {formatTaka(r.amount)}
+            {money(r.amount)}
           </Text>
         </View>
       ))}
-      <Text style={coachStyles.muted}>Plus about {formatTaka(forecast.dailySpend)} of everyday spending a day.</Text>
+      <Text style={coachStyles.muted}>{t('forecast.everyday', { amount: money(forecast.dailySpend) })}</Text>
     </View>
   );
 }
 
 export function LowConfidenceNote({ days }: { days: number }) {
+  const { t } = useI18n();
   return (
     <View style={coachStyles.card} testID="forecast-low-confidence">
-      <Text style={coachStyles.cardTitle}>Rough estimate</Text>
-      <Text style={coachStyles.body}>
-        We only have {days} day{days === 1 ? '' : 's'} of your transactions. The forecast gets reliable after a month of use.
-      </Text>
+      <Text style={coachStyles.cardTitle}>{t('forecast.roughTitle')}</Text>
+      <Text style={coachStyles.body}>{t('forecast.roughBody', { count: days })}</Text>
     </View>
   );
 }

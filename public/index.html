@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <!--
+      TC-P4-SEC-01/02: strict Content-Security-Policy. The session token lives in
+      localStorage, so no third-party or inline script may run: scripts only from
+      this origin, connections only to the Supabase API (local stack or hosted),
+      no plugins, no framing. Styles need 'unsafe-inline' (react-native-web
+      injects them at runtime). 'wasm-unsafe-eval' lets the QR decoder compile its
+      WebAssembly, served from this origin (src/lib/qr/decoder.ts); it does not
+      allow eval() of scripts. blob: lets the scanner read a picked image. ws: is for the dev server's hot reload. When
+      deployed, send the same policy as an HTTP header too (docs/security-review.md).
+    -->
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' blob: http://127.0.0.1:54321 http://localhost:54321 https://*.supabase.co ws://localhost:* ws://127.0.0.1:*; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta name="referrer" content="no-referrer" />
+    <title>%WEB_TITLE%</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>

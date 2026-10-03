@@ -74,6 +74,18 @@ class FastIsolationForest:
 
 
 @dataclass
+class Explanation:
+    """Exact TreeSHAP values of the XGBoost risk model, in log-odds (margin) space:
+    base_value + sum(contributions) = margin, the model's raw output, and
+    risk_score = sigmoid(margin) (TC-P4-INV-03/04)."""
+    risk_score: float
+    margin: float
+    base_value: float
+    contributions: dict[str, float]
+    features: dict[str, float]
+
+
+@dataclass
 class Score:
     risk_score: float
     anomaly_score: float
@@ -145,6 +157,21 @@ class RiskModel:
         if risk >= t["review"] or (anomaly >= t["anomaly"] and not low_confidence):
             return "REVIEW"
         return "ALLOW"
+
+    def explain(self, row: dict) -> Explanation:
+        """SHAP values for one row (the same filling rules as score()). Uses XGBoost's native
+        pred_contribs, so no extra library and exact values for this model."""
+        X = self._row(row).astype(np.float32)
+        dm = xgb.DMatrix(X, feature_names=self.features)
+        contribs = self.booster.predict(dm, pred_contribs=True)[0]
+        margin = float(self.booster.predict(dm, output_margin=True)[0])
+        return Explanation(
+            risk_score=float(self.booster.predict(dm)[0]),
+            margin=margin,
+            base_value=float(contribs[-1]),
+            contributions={f: float(c) for f, c in zip(self.features, contribs[:-1])},
+            features={f: float(v) for f, v in zip(self.features, X[0])},
+        )
 
     def score(self, rows: list[dict]) -> list[Score]:
         # Serving path: plain numpy, no DataFrames (a request scores one row).

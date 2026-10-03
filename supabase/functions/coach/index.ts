@@ -2,6 +2,8 @@
 //
 // POST { action: 'insights', period: 'WEEK' | 'MONTH' | '3M' }   (user JWT)
 // POST { action: 'ask', question: string }
+// Both take lang: 'en' | 'bn' (Phase 4, TC-P4-L10N-06/07): answers, figures and
+// labels come back in that language; insights are cached per language.
 // The caller is always the JWT's user. A user_id for someone else is refused
 // with 403 (TC-P3-MW-02); the LLM only ever sees anonymised aggregates and
 // placeholders (orchestrator.ts). Dashboard numbers come from SQL RPCs, not here.
@@ -10,9 +12,9 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@0.131.0';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-import { AnthropicProvider } from './anthropic.ts';
+import { AnthropicProvider } from '../_shared/llm/anthropic.ts';
 import { runAsk, runInsights, type CoachDeps } from './orchestrator.ts';
-import { PERIODS, type Period } from './types.ts';
+import { LANGS, PERIODS, type Lang, type Period } from './types.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -68,14 +70,17 @@ Deno.serve(async (req) => {
   }
   if (body.user_id !== undefined && body.user_id !== userId) return json(403, { code: 'FORBIDDEN' }); // TC-P3-MW-02
 
+  const lang = (body.lang ?? 'en') as Lang;
+  if (!LANGS.includes(lang)) return json(400, { code: 'INVALID_LANGUAGE' });
+
   try {
     let res;
     if (body.action === 'insights') {
       const period = (body.period ?? 'MONTH') as Period;
       if (!PERIODS.includes(period)) return json(400, { code: 'INVALID_PERIOD' });
-      res = await runInsights(deps, userId, period);
+      res = await runInsights(deps, userId, period, lang);
     } else if (body.action === 'ask') {
-      res = await runAsk(deps, userId, body.question);
+      res = await runAsk(deps, userId, body.question, lang);
     } else {
       return json(400, { code: 'INVALID_REQUEST' });
     }

@@ -1,0 +1,33 @@
+{
+  "mode": "concurrency 50 x 180s",
+  "payments": 5872,
+  "throughput_per_s": 31.5,
+  "p50_ms": 1362,
+  "p95_ms": 3174,
+  "p99_ms": 4544,
+  "max_ms": 7465,
+  "error_rate": 0.0005,
+  "rejected_by_rule": {
+    "DAILY_LIMIT_EXCEEDED": 235
+  },
+  "recovered_retries": 15,
+  "errors_by_code": {
+    "Internal Server Error": 3
+  },
+  "decisions": {
+    "ALLOW": 205,
+    "FLAG": 907,
+    "REVIEW": 4522,
+    "none": 238
+  },
+  "reconcile": {
+    "wallets": 138,
+    "mismatches": [],
+    "ledger_imbalance": 0,
+    "mismatched_wallets": 0,
+    "unpaired_transactions": 0
+  },
+  "sla_ms": 1500,
+  "pass": false,
+  "note": "Local Docker stack on a laptop; production numbers need production-like hardware."
+}

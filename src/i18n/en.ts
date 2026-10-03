@@ -133,6 +133,10 @@ export const en = {
   'stepUp.title': 'Confirm this payment',
   'stepUp.body': 'For your security, please confirm you want to pay {amount} to {name}.',
   'stepUp.confirm': 'Confirm and pay',
+  'stepUp.warnTitle': 'Stop and check before you continue',
+  'stepUp.warnPin': 'Shongrokhon never calls or messages you to ask for your PIN or code. Never share them.',
+  'stepUp.warnPressure': 'Scammers pretend to be a bank, the police, a relative or a prize office, and rush you to pay or cash out. Don\'t act under pressure.',
+  'stepUp.warnCancel': "If you're not sure who gets this money, cancel. Nothing has been charged yet.",
 
   // Receipt
   'receipt.success': 'Payment successful',

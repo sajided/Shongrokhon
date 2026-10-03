@@ -26,9 +26,17 @@ describe('TC-P2-FLOW-03: step-up confirmation', () => {
     expect(screen.getByTestId('error-banner')).toHaveTextContent(/4 or 5 digits/);
   });
 
+  it('warns the user about scams before they confirm', async () => {
+    await render(<StepUpConfirm {...base} onConfirm={jest.fn()} onCancel={jest.fn()} />);
+    const warning = screen.getByTestId('step-up-warning');
+    expect(warning).toHaveTextContent(/Stop and check/);
+    expect(warning).toHaveTextContent(/never calls or messages you to ask for your PIN/);
+    expect(warning).toHaveTextContent(/Nothing has been charged yet/);
+  });
+
   it('never says why the payment is being checked', async () => {
     await render(<StepUpConfirm {...base} onConfirm={jest.fn()} onCancel={jest.fn()} />);
-    expect(screen.getByTestId('step-up')).not.toHaveTextContent(/risk|fraud|suspicious|cash-?out/i);
+    expect(screen.getByTestId('step-up')).not.toHaveTextContent(/risk|fraud|suspicious|flag|score|unusual/i);
   });
 
   it('shows server errors and lets the user cancel', async () => {

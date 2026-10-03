@@ -20,7 +20,8 @@ export interface StepUpConfirmProps {
 
 /**
  * TC-P2-FLOW-03: a medium-risk payment runs only after the user confirms it
- * again with their PIN. The wording is neutral and never says why.
+ * again with their PIN. A scam warning asks the user to stop and check, but
+ * never says why this one was stopped, so the rules can't be probed.
  */
 export function StepUpConfirm({ merchantName, amount, body, confirmLabel, busy, serverError, onConfirm, onCancel }: StepUpConfirmProps) {
   const { t, msg, money } = useI18n();
@@ -43,6 +44,15 @@ export function StepUpConfirm({ merchantName, amount, body, confirmLabel, busy, 
         <Text style={[styles.text, styles.strong]} testID="step-up-amount">
           {money(amount)}
         </Text>
+      </View>
+      <View style={styles.warning} accessibilityRole="alert" testID="step-up-warning">
+        <Text style={styles.warningHeading}>{t('stepUp.warnTitle')}</Text>
+        {(['stepUp.warnPin', 'stepUp.warnPressure', 'stepUp.warnCancel'] as const).map((key) => (
+          <Text key={key} style={styles.text}>
+            {'\u2022 '}
+            {t(key)}
+          </Text>
+        ))}
       </View>
       <Field
         label={t('common.pin')}
@@ -68,4 +78,6 @@ const styles = StyleSheet.create({
   heading: { color: colors.warning, fontSize: 18, fontWeight: '700' },
   text: { color: colors.text, fontSize: 15, lineHeight: 21 },
   strong: { fontWeight: '700' },
+  warning: { borderColor: colors.warning, borderWidth: 2, borderRadius: 12, padding: 16, gap: 8 },
+  warningHeading: { color: colors.warning, fontSize: 16, fontWeight: '700' },
 });

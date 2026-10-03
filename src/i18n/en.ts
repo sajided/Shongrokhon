@@ -46,9 +46,12 @@ export const en = {
   'signIn.title': 'Welcome',
   'signIn.body': 'Enter your mobile number. New numbers are registered automatically.',
   'signIn.phone': 'Mobile number',
+  'signIn.bodyEmail': 'Enter your email address. New addresses are registered automatically.',
+  'signIn.email': 'Email address',
   'signIn.send': 'Send code',
   'verify.title': 'Enter the code',
   'verify.body': 'We sent a 6-digit code to {phone}.',
+  'verify.bodyEmail': 'We emailed a 6-digit code to {email}.',
   'verify.code': 'Verification code',
   'verify.submit': 'Verify',
   'verify.resend': 'Resend code',
@@ -160,6 +163,7 @@ export const en = {
 
   // Send money (Phase 4)
   'send.phone': "Recipient's mobile number",
+  'send.phoneOrEmail': "Recipient's mobile number or email",
   'send.find': 'Find recipient',
   'send.to': 'Sending to',
   'send.note': 'Note (optional)',
@@ -292,6 +296,10 @@ export const en = {
 
   // Errors (codes from the server and client validation)
   'error.INVALID_PHONE': 'Enter a valid Bangladeshi mobile number, e.g. 01712345678.',
+  'error.INVALID_EMAIL': 'Enter a valid email address, e.g. name@example.com.',
+  'error.INVALID_RECIPIENT': 'Enter a mobile number like 01712345678 or an email address.',
+  'error.EMAIL_SIGN_IN_DISABLED': 'Email sign-in is not available. Use your mobile number.',
+  'error.STAFF_ACCOUNT': 'Staff accounts sign in to the Investigation Assistant, not the wallet.',
   'error.INVALID_OTP_FORMAT': 'The code has 6 digits.',
   'error.WRONG_OTP': 'That code is not correct.',
   'error.OTP_EXPIRED': 'This code has expired. Request a new one.',

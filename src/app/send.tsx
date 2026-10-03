@@ -1,5 +1,5 @@
 // Send money to another Shongrokhon customer (Phase 4). The recipient is
-// confirmed by first name and masked number only. Scored by `pay` (SQL rules);
+// confirmed by first name and masked number (or email) only. Scored by `pay` (SQL rules);
 // same idempotency, offline recovery and step-up as payments.
 import * as Crypto from 'expo-crypto';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -13,7 +13,11 @@ import { useI18n } from '@/i18n/LocaleProvider';
 import { useScreenView } from '@/lib/analytics';
 import { ApiError, getPaymentStatus, lookupRecipient, makePayment } from '@/lib/api';
 import { submitPayment } from '@/lib/payment-flow';
-import { isValidPin, normalizeBdPhone, validateAmount } from '@/lib/validation';
+import { readAuthMethod } from '@/lib/config';
+import { isValidPin, normalizeRecipient, validateAmount } from '@/lib/validation';
+
+// Email-registered customers have no phone number, so they are found by email.
+const BY_EMAIL = readAuthMethod() === 'email';
 
 const waitForOnline = () => new Promise<void>((resolve) => setTimeout(resolve, 1000));
 
@@ -45,12 +49,12 @@ export default function SendMoney() {
   };
 
   const find = () => {
-    const e164 = normalizeBdPhone(phone);
-    if (!e164) return setError(msg('INVALID_PHONE'));
+    const to = normalizeRecipient(phone);
+    if (!to) return setError(msg(BY_EMAIL ? 'INVALID_RECIPIENT' : 'INVALID_PHONE'));
     return run(async () => {
-      const found = await lookupRecipient(e164);
+      const found = await lookupRecipient(to);
       if (!found) return setError(msg('RECIPIENT_NOT_FOUND'));
-      setRecipient({ phone: e164, name: found.display_name, masked: found.masked_phone });
+      setRecipient({ phone: to, name: found.display_name, masked: found.masked_phone });
     });
   };
 
@@ -96,8 +100,13 @@ export default function SendMoney() {
       <Title>{t('nav.send')}</Title>
       {!recipient ? (
         <>
-          <Field label={t('send.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad"
-            placeholder="01XXXXXXXXX" maxLength={16} testID="recipient-input" />
+          {BY_EMAIL ? (
+            <Field label={t('send.phoneOrEmail')} value={phone} onChangeText={setPhone} keyboardType="email-address"
+              autoCapitalize="none" maxLength={254} testID="recipient-input" />
+          ) : (
+            <Field label={t('send.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad"
+              placeholder="01XXXXXXXXX" maxLength={16} testID="recipient-input" />
+          )}
           <ErrorBanner message={error} />
           <Button title={t('send.find')} onPress={find} busy={busy} disabled={!phone.trim()} testID="recipient-find" />
         </>

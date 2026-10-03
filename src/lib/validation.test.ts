@@ -1,6 +1,27 @@
 import {
-  isValidOtp, isValidPin, normalizeBdPhone, toAsciiDigits, validateAmount, validateGoalAmount, validateGoalMonths,
+  isValidOtp, isValidPin, normalizeBdPhone, normalizeEmail, normalizeRecipient, toAsciiDigits, validateAmount, validateGoalAmount, validateGoalMonths,
 } from './validation';
+
+describe('email sign-in validation', () => {
+  it.each([
+    [' Name@Example.COM ', 'name@example.com'],
+    ['a.b+c@mail.co.bd', 'a.b+c@mail.co.bd'],
+    ['no-at-sign.com', null],
+    ['name@nodot', null],
+    ['two@@example.com', null],
+    ['sp ace@example.com', null],
+    ['', null],
+  ])('normalizeEmail(%p) -> %p', (input, expected) => {
+    expect(normalizeEmail(input)).toBe(expected);
+  });
+
+  it('a send-money recipient is a phone number or an email', () => {
+    expect(normalizeRecipient('01712345678')).toBe('+8801712345678');
+    expect(normalizeRecipient('Friend@Example.com')).toBe('friend@example.com');
+    expect(normalizeRecipient('friend@')).toBeNull();
+    expect(normalizeRecipient('12345')).toBeNull();
+  });
+});
 
 describe('TC-P1-AUTH-02: phone validation', () => {
   it.each([

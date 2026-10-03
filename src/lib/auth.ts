@@ -15,14 +15,17 @@ async function invokeOtp(body: Record<string, string>): Promise<Record<string, u
   throw new ApiError('INTERNAL_ERROR');
 }
 
-/** Sends an SMS code. Registration and login are the same flow (TC-P1-AUTH-06). */
-export async function sendOtp(phoneE164: string): Promise<void> {
-  await invokeOtp({ action: 'send', phone: phoneE164 });
+// `to` is an E.164 phone number or an email (readAuthMethod).
+const target = (to: string): Record<string, string> => (to.includes('@') ? { email: to } : { phone: to });
+
+/** Sends an SMS or email code. Registration and login are the same flow (TC-P1-AUTH-06). */
+export async function sendOtp(to: string): Promise<void> {
+  await invokeOtp({ action: 'send', ...target(to) });
 }
 
 /** Verifies the code through the `otp` Edge Function and stores the session securely. */
-export async function verifyOtp(phoneE164: string, token: string): Promise<void> {
-  const data = await invokeOtp({ action: 'verify', phone: phoneE164, token });
+export async function verifyOtp(to: string, token: string): Promise<void> {
+  const data = await invokeOtp({ action: 'verify', ...target(to), token });
   const session = data.session as { access_token: string; refresh_token: string } | undefined;
   if (!session) throw new ApiError('INTERNAL_ERROR');
   const { error } = await getSupabase().auth.setSession({

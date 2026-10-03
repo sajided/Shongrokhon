@@ -12,6 +12,8 @@ export interface StepUpConfirmProps {
   /** Cash-outs and transfers pass their own sentence and button label. */
   body?: string;
   confirmLabel?: string;
+  /** CASHOUT_MERCHANT: the merchant looks like a disguised cash-out point; tell the user not to pay. */
+  warning?: 'CASHOUT_MERCHANT';
   busy: boolean;
   serverError: string | null;
   onConfirm: (pin: string) => void;
@@ -23,7 +25,9 @@ export interface StepUpConfirmProps {
  * again with their PIN. A scam warning asks the user to stop and check, but
  * never says why this one was stopped, so the rules can't be probed.
  */
-export function StepUpConfirm({ merchantName, amount, body, confirmLabel, busy, serverError, onConfirm, onCancel }: StepUpConfirmProps) {
+export function StepUpConfirm({
+  merchantName, amount, body, confirmLabel, warning, busy, serverError, onConfirm, onCancel,
+}: StepUpConfirmProps) {
   const { t, msg, money } = useI18n();
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -45,15 +49,23 @@ export function StepUpConfirm({ merchantName, amount, body, confirmLabel, busy, 
           {money(amount)}
         </Text>
       </View>
-      <View style={styles.warning} accessibilityRole="alert" testID="step-up-warning">
-        <Text style={styles.warningHeading}>{t('stepUp.warnTitle')}</Text>
-        {(['stepUp.warnPin', 'stepUp.warnPressure', 'stepUp.warnCancel'] as const).map((key) => (
-          <Text key={key} style={styles.text}>
-            {'\u2022 '}
-            {t(key)}
-          </Text>
-        ))}
-      </View>
+      {warning === 'CASHOUT_MERCHANT' ? (
+        <View style={styles.danger} accessibilityRole="alert" testID="step-up-cashout-warning">
+          <Text style={styles.dangerHeading}>{t('stepUp.cashoutTitle')}</Text>
+          <Text style={styles.text}>{t('stepUp.cashoutBody', { name: merchantName })}</Text>
+          <Text style={[styles.text, styles.strong]}>{t('stepUp.cashoutAdvice', { name: merchantName })}</Text>
+        </View>
+      ) : (
+        <View style={styles.warning} accessibilityRole="alert" testID="step-up-warning">
+          <Text style={styles.warningHeading}>{t('stepUp.warnTitle')}</Text>
+          {(['stepUp.warnPin', 'stepUp.warnPressure', 'stepUp.warnCancel'] as const).map((key) => (
+            <Text key={key} style={styles.text}>
+              {'\u2022 '}
+              {t(key)}
+            </Text>
+          ))}
+        </View>
+      )}
       <Field
         label={t('common.pin')}
         testID="step-up-pin"
@@ -66,8 +78,18 @@ export function StepUpConfirm({ merchantName, amount, body, confirmLabel, busy, 
         placeholder="••••"
       />
       <ErrorBanner message={error ?? serverError} />
-      <Button title={confirmLabel ?? t('stepUp.confirm')} onPress={confirm} busy={busy} testID="step-up-confirm" />
-      <Button title={t('common.cancel')} variant="secondary" onPress={onCancel} disabled={busy} testID="step-up-cancel" />
+      {warning === 'CASHOUT_MERCHANT' ? (
+        <>
+          {/* The safe choice is the primary button; paying needs the PIN and a deliberate second tap. */}
+          <Button title={t('stepUp.cashoutCancel')} onPress={onCancel} disabled={busy} testID="step-up-cancel" />
+          <Button title={t('stepUp.cashoutConfirm')} variant="secondary" onPress={confirm} busy={busy} testID="step-up-confirm" />
+        </>
+      ) : (
+        <>
+          <Button title={confirmLabel ?? t('stepUp.confirm')} onPress={confirm} busy={busy} testID="step-up-confirm" />
+          <Button title={t('common.cancel')} variant="secondary" onPress={onCancel} disabled={busy} testID="step-up-cancel" />
+        </>
+      )}
     </View>
   );
 }
@@ -80,4 +102,6 @@ const styles = StyleSheet.create({
   strong: { fontWeight: '700' },
   warning: { borderColor: colors.warning, borderWidth: 2, borderRadius: 12, padding: 16, gap: 8 },
   warningHeading: { color: colors.warning, fontSize: 16, fontWeight: '700' },
+  danger: { backgroundColor: colors.dangerSurface, borderColor: colors.danger, borderWidth: 2, borderRadius: 12, padding: 16, gap: 8 },
+  dangerHeading: { color: colors.danger, fontSize: 17, fontWeight: '700' },
 });

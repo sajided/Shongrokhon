@@ -153,6 +153,11 @@ Deno.serve(async (req) => {
       }
       return json(status >= 400 && status < 500 ? 400 : 500, { code });
     }
+    if (kind === 'PAYMENT' && score && data?.status === 'STEP_UP_REQUIRED') {
+      // Read from the score row, so a retry with the same key gets the same warning.
+      const { data: row } = await admin.from('risk_scores').select('warning').eq('id', score).maybeSingle();
+      if (row?.warning) return json(200, { ...data, warning: row.warning });
+    }
     return json(200, data);
   } catch (e) {
     console.error(JSON.stringify({ event: 'pay_error', message: e instanceof Error ? e.message : 'unknown' }));

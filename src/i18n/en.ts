@@ -141,6 +141,11 @@ export const en = {
   'stepUp.warnPin': 'Shongrokhon never calls or messages you to ask for your PIN or code. Never share them.',
   'stepUp.warnPressure': 'Scammers pretend to be a bank, the police, a relative or a prize office, and rush you to pay or cash out. Don\'t act under pressure.',
   'stepUp.warnCancel': "If you're not sure who gets this money, cancel. Nothing has been charged yet.",
+  'stepUp.cashoutTitle': "Don't pay: this looks like a cash-out",
+  'stepUp.cashoutBody': '{name} usually withdraws money as cash minutes after it is paid. Payments like this are used to cash out without the fee, or to pass money to scammers.',
+  'stepUp.cashoutAdvice': "Only pay if you are buying something from {name} in person. If someone asked you to pay here to get cash or a prize, it's a scam. Nothing has been charged yet.",
+  'stepUp.cashoutCancel': "Don't pay",
+  'stepUp.cashoutConfirm': 'Pay anyway',
 
   // Receipt
   'receipt.success': 'Payment successful',

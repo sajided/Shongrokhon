@@ -130,6 +130,8 @@ export interface PaymentResponse {
   attempts_left?: number;
   locked_until?: string;
   risk_decision?: 'ALLOW' | 'REVIEW' | 'FLAG' | null;
+  /** With STEP_UP_REQUIRED: the merchant looks like a disguised cash-out point; warn the payer not to pay. */
+  warning?: 'CASHOUT_MERCHANT';
   /** The payment went through but was flagged for review (TC-P2-FLOW-02). */
   flagged?: boolean;
   /** Phase 4 flows: CASHOUT / TRANSFER results carry the kind, fee and counterparty. */

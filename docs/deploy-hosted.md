@@ -106,6 +106,8 @@ check that you receive the SMS code. The web CSP (`public/index.html`, `admin/in
 
 ## 7. Host the web app on Vercel
 
+Production: `https://shongrokhon.vercel.app` (project `shongrokhon`, first deployed 2026-10-03).
+
 `vercel.json` holds the build (`npm run build` → `dist/`), the SPA fallback to `index.html`, and the security headers
 the CSP meta tag can't express: CSP with `frame-ancestors 'none'`, HSTS, `X-Frame-Options`, and a `Permissions-Policy`
 that allows the camera for the QR scanner.
@@ -116,12 +118,16 @@ that allows the camera for the QR scanner.
    npx vercel login
    npx vercel link                     # create or pick the project; framework "Other"
    npx vercel env add EXPO_PUBLIC_SUPABASE_URL        # https://ljxabckmeelssiffahzy.supabase.co
-   npx vercel env add EXPO_PUBLIC_SUPABASE_ANON_KEY   # the publishable/anon key only, never a secret key
+   npx vercel env add EXPO_PUBLIC_SUPABASE_ANON_KEY production --type config --value "<anon key>" --yes
+                                       # the publishable/anon key only, never a secret key; Vercel asks for
+                                       # --type config because EXPO_PUBLIC_ values ship in the bundle
    npx vercel env add EXPO_PUBLIC_AUTH_METHOD         # email (or phone)
    ```
 
 2. Deploy: `npx vercel` for a preview URL, `npx vercel --prod` for production. Connecting the GitHub repo in the
    Vercel dashboard does the same on every push.
+   `.vercelignore` is an allowlist: the CLI uploads only `src/`, `public/`, `assets/`, `scripts/` and the build
+   config. Keep it that way so `supabase/.env`, `supabase/functions/.env` and `ml/` never leave the machine.
 3. Add the deployed address to Supabase: Authentication → URL Configuration → **Site URL** and **Redirect URLs**
    (step 4). Sign-in links go nowhere until it is listed.
 

@@ -60,3 +60,5 @@ __pycache__/
 
 # Copied from node_modules on install (scripts/copy-zxing.mjs)
 public/zxing/
+.vercel
+.env*.local

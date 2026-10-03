@@ -175,6 +175,26 @@ select is((public.record_risk_score(:'u', 'MRISK0001', 100, gen_random_uuid(),
   '{"amount": 100, "payer_merchant_count_10m": 4}', 'FALLBACK')) ->> 'decision', 'REVIEW', 'FLOW-04: fallback steps up bursts');
 select is((select model_version from public.risk_scores where source = 'FALLBACK' limit 1), 'rules-v1', 'FLOW-04: fallback is recorded as such');
 
+-- Cash-out through a merchant payment: a merchant that cashes out most receipts, fast.
+select is(public.record_risk_score(:'u', 'MRISK0001', 500, gen_random_uuid(),
+  '{"amount": 500, "payer_merchant_count_10m": 0, "merchant_cashout_ratio_7d": 0.9, "merchant_cashout_lag_min": 15}', 'FALLBACK')
+  - 'id' - 'source', '{"decision": "REVIEW", "warning": "CASHOUT_MERCHANT"}'::jsonb,
+  'Cash-out merchant: fallback steps up with a CASHOUT_MERCHANT warning');
+select is(public.record_risk_score(:'u', 'MRISK0001', 500, gen_random_uuid(), '{}', 'MODEL', 0.1, -0.2, false, 'v1')
+  - 'id' - 'source', '{"decision": "ALLOW", "warning": null}'::jsonb, 'No cash-out features -> no warning');
+select is((public.record_risk_score(:'u', 'MRISK0001', 500, gen_random_uuid(),
+  '{"merchant_cashout_ratio_7d": 0.9, "merchant_cashout_lag_min": 15}', 'MODEL', 0.1, -0.2, false, 'v1')) ->> 'decision',
+  'REVIEW', 'Cash-out merchant: an ALLOW from the model is stepped up too');
+select is((public.record_risk_score(:'u', 'MRISK0001', 500, gen_random_uuid(),
+  '{"merchant_cashout_ratio_7d": 0.9, "merchant_cashout_lag_min": 15}', 'MODEL', 0.9, -0.2, false, 'v1')) ->> 'decision',
+  'FLAG', 'Cash-out merchant: FLAG keeps its own path');
+select is((public.record_risk_score(:'u', 'MRISK0001', 500, gen_random_uuid(),
+  '{"amount": 500, "merchant_cashout_ratio_7d": 0.4, "merchant_cashout_lag_min": 15}', 'FALLBACK')) ->> 'warning',
+  null, 'A shop that cashes out part of its takings is not warned about');
+select is((public.record_risk_score(:'u', 'MRISK0001', 500, gen_random_uuid(),
+  '{"amount": 500, "merchant_cashout_ratio_7d": 0.9, "merchant_cashout_lag_min": 600}', 'FALLBACK')) ->> 'warning',
+  null, 'An evening cash-out of the day''s takings is not warned about');
+
 -- Expired, unused scores are replaced on re-score.
 update public.risk_scores set expires_at = now() - interval '1 second' where id = ((:'rs_allow'::jsonb) ->> 'id')::uuid;
 select is((public.record_risk_score(:'u', 'MRISK0001', 100, :'k5', '{}', 'MODEL', 0.99, 0, false, 'v2')) ->> 'decision',

@@ -43,7 +43,7 @@ export default function Pay() {
   const [checking, setChecking] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   // TC-P2-FLOW-03: set when the server asks the user to confirm a medium-risk payment.
-  const [stepUp, setStepUp] = useState<{ amount: number; account?: string } | null>(null);
+  const [stepUp, setStepUp] = useState<{ amount: number; account?: string; warning?: 'CASHOUT_MERCHANT' } | null>(null);
 
   const merchantId = parsed.ok ? parsed.qr.merchantId : null;
 
@@ -96,7 +96,8 @@ export default function Pay() {
         return;
       }
       if (result.status === 'STEP_UP_REQUIRED') {
-        setStepUp({ amount, account });
+        // Keep a warning from the first response if the confirm call is stepped up again.
+        setStepUp((prev) => ({ amount, account, warning: result.warning ?? prev?.warning }));
         return;
       }
       setServerError(msg(result.code, { attempts_left: result.attempts_left }));
@@ -120,6 +121,7 @@ export default function Pay() {
         <StepUpConfirm
           merchantName={merchant.merchant_name}
           amount={stepUp.amount}
+          warning={stepUp.warning}
           busy={busy}
           serverError={serverError}
           onConfirm={(pin) => onSubmit({ amount: stepUp.amount, pin, account: stepUp.account }, true)}

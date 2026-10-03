@@ -172,3 +172,13 @@ Email sign-in for deployments without an SMS provider (migration `…012`). It i
 | Email sign-in uses Supabase's link, not a code | otp fn, unit | 🟡 | `send` passes `redirect_to` (implicit flow); `verify` refuses email. `parseLinkFragment` unit-tested (session, `LINK_EXPIRED`, `LINK_INVALID`). Click-through not yet run against a live inbox. |
 | Email and recipient validation; auth method switch | unit | ✅ | `normalizeEmail`, `normalizeRecipient`, `readAuthMethod`. |
 | Real email delivery on the hosted project | manual | 🟡 | Needs `{{ .ConfirmationURL }}` in the templates and the app's URL in the redirect allow list (see `docs/deploy-hosted.md`). |
+
+### Cash-out through a merchant payment (migration `…014`)
+A merchant that cashes out most of what it receives, fast (`merchant_cashout_ratio_7d >= app_config.cashout_pattern_ratio`, default 0.6, and `merchant_cashout_lag_min <= cashout_pattern_lag_min`, default 120), is treated as a disguised cash-out point. Paying it is stepped up with `warning = 'CASHOUT_MERCHANT'`; the app tells the payer not to pay ("Don't pay" is the primary button, "Pay anyway" still needs the PIN). Works with the model and with the fallback rules; FLAG keeps its own path. Thresholds sit between the synthetic pseudo merchants (cash out 55–95% within minutes) and fast legit shops (~40%).
+
+| Check | Where | Status | Notes |
+|---|---|---|---|
+| Pattern steps up ALLOW with a `CASHOUT_MERCHANT` warning (fallback and model); FLAG unchanged | db/04 | ⏳ | Written; not yet run (Docker was off). |
+| Partial or evening cash-outs are not warned about | db/04 | ⏳ | Written; not yet run. |
+| `pay` returns `warning` with `STEP_UP_REQUIRED`, read from the score row (same on retry) | int | ⏳ | No integration test yet. |
+| Warning screen: "Don't pay" cancels; "Pay anyway" needs the PIN | comp StepUpConfirm | ✅ | |

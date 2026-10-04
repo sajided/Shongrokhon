@@ -62,8 +62,9 @@ function RootNavigator() {
         headerTitleStyle: { fontWeight: '700' },
         contentStyle: { backgroundColor: colors.background },
       }}>
+      <Stack.Screen name="demo" options={{ title: t('nav.demo'), headerShown: false }} />
       <Stack.Protected guard={!signedIn}>
-        <Stack.Screen name="sign-in" options={{ title: t('nav.signIn') }} />
+        <Stack.Screen name="sign-in" options={{ title: t('nav.signIn'), headerShown: false }} />
         <Stack.Screen name="verify" options={{ title: t('nav.verify') }} />
       </Stack.Protected>
       <Stack.Protected guard={signedIn && !hasPin}>

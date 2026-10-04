@@ -62,7 +62,6 @@ function RootNavigator() {
         headerTitleStyle: { fontWeight: '700' },
         contentStyle: { backgroundColor: colors.background },
       }}>
-      <Stack.Screen name="demo" options={{ title: t('nav.demo'), headerShown: false }} />
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ title: t('nav.signIn'), headerShown: false }} />
         <Stack.Screen name="verify" options={{ title: t('nav.verify') }} />
@@ -84,6 +83,9 @@ function RootNavigator() {
         <Stack.Screen name="bills" options={{ title: t('nav.bills') }} />
         <Stack.Screen name="settings" options={{ title: t('nav.settings') }} />
       </Stack.Protected>
+      {/* Open to everyone, so it must stay last: a guarded-out route (e.g. `/` after an email
+          sign-in link, before a PIN is set) falls back to the first screen it is allowed to see. */}
+      <Stack.Screen name="demo" options={{ title: t('nav.demo'), headerShown: false }} />
     </Stack>
   );
 }

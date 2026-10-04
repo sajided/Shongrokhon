@@ -182,3 +182,12 @@ A merchant that cashes out most of what it receives, fast (`merchant_cashout_rat
 | Partial or evening cash-outs are not warned about | db/04 | ⏳ | Written; not yet run. |
 | `pay` returns `warning` with `STEP_UP_REQUIRED`, read from the score row (same on retry) | int | ⏳ | No integration test yet. |
 | Warning screen: "Don't pay" cancels; "Pay anyway" needs the PIN | comp StepUpConfirm | ✅ | |
+
+### Sign-in landing page and product tour
+The sign-in page explains the app (features, how disguised cash-outs are caught, how to get started) and links to `/demo`, a six-step tour of mock screens (home, scan & pay, risk check, cash-out warning, coach, savings and forecast). The tour uses made-up data on the client only; it calls no backend.
+
+| Check | Where | Status | Notes |
+|---|---|---|---|
+| Tour steps forward, back and by dot; finish returns to sign-in; no `fetch` | comp DemoTour | ✅ | |
+| Every new string is translated; no hard-coded text | unit (L10N-02) | ✅ | |
+| Sign-in → tour → sign-in in the browser, no Edge Function calls | e2e auth | ⏳ | Written; not yet run (needs the local stack). |

@@ -51,3 +51,19 @@ test('TC-P1-AUTH-09: logout clears the session and protected pages are unreachab
     await expect(page.getByTestId('balance')).toHaveCount(0);
   }
 });
+
+test('Sign-in page explains the app and opens the product tour', async ({ page }) => {
+  const calls: string[] = [];
+  await page.goto('/');
+  await expect(page.getByTestId('cashout-preview')).toBeVisible();
+  page.on('request', (r) => r.url().includes('/functions/v1/') && calls.push(r.url()));
+  await page.getByTestId('demo-button').click();
+  await expect(page.getByTestId('demo-screen-home')).toBeVisible();
+  for (const name of ['pay', 'check', 'cashout', 'coach', 'plan']) {
+    await page.getByTestId('demo-next').click();
+    await expect(page.getByTestId(`demo-screen-${name}`)).toBeVisible();
+  }
+  await page.getByTestId('demo-next').click();
+  await expect(page.getByTestId('phone-input')).toBeVisible();
+  expect(calls).toEqual([]);
+});

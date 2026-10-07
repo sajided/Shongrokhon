@@ -416,6 +416,28 @@ export const en = {
   'ask.submit': 'Ask',
   'ask.disclaimer': 'General guidance only, not financial, investment or loan advice.',
 
+  // AI Copilot Floating Chatbot
+  'copilot.fab': 'Open AI Copilot',
+  'copilot.badge': 'AI',
+  'copilot.title': 'Shongrokhon Copilot',
+  'copilot.subtitle': 'AI Financial & Wallet Assistant',
+  'copilot.status': 'Online',
+  'copilot.welcome': "Hello! I'm your AI Copilot. Ask me anything about your spending habits, cash-out trends, savings plans, Bangla QR, or wallet security.",
+  'copilot.suggestionsTitle': 'Quick questions you can ask:',
+  'copilot.prompt1': 'How can I cut my spending this month?',
+  'copilot.prompt2': 'What is my current cash dependency?',
+  'copilot.prompt3': 'How does Bangla QR interoperability work?',
+  'copilot.prompt4': 'How does scam interception protect me?',
+  'copilot.placeholder': 'Ask your copilot anything...',
+  'copilot.send': 'Send question',
+  'copilot.clear': 'Clear chat',
+  'copilot.close': 'Close chat',
+  'copilot.thinking': 'Copilot is analyzing your finances...',
+  'copilot.disclaimer': 'AI guidance grounded in your financial data. Not regulated advice.',
+  'copilot.empty': 'Start a conversation with your AI Copilot.',
+  'copilot.retry': 'Retry',
+  'copilot.errorGeneric': 'Could not get an answer right now. Please try again.',
+
   // Savings planner
   'savings.title': 'Savings planner',
   'savings.noHistory': 'Once you have a month of transactions, we will check each goal against your spending.',

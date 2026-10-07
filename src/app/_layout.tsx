@@ -2,9 +2,11 @@ import { NotoSansBengali_400Regular, NotoSansBengali_700Bold, useFonts } from '@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ConfigGate } from '@/components/ConfigGate';
+import { FloatingCopilot } from '@/components/FloatingCopilot';
 import { Body, Button, colors, Screen, Title } from '@/components/ui';
 import { SessionProvider, useSession } from '@/hooks/session';
 import { LocaleProvider, useI18n } from '@/i18n/LocaleProvider';
@@ -55,37 +57,40 @@ function RootNavigator() {
 
   // Route guards (TC-P1-AUTH-09): protected screens are unreachable without a session.
   return (
-    <Stack
-      screenOptions={{
-        headerShadowVisible: false,
-        headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: '700' },
-        contentStyle: { backgroundColor: colors.background },
-      }}>
-      <Stack.Protected guard={!signedIn}>
-        <Stack.Screen name="sign-in" options={{ title: t('nav.signIn'), headerShown: false }} />
-        <Stack.Screen name="verify" options={{ title: t('nav.verify') }} />
-      </Stack.Protected>
-      <Stack.Protected guard={signedIn && !hasPin}>
-        <Stack.Screen name="set-pin" options={{ title: t('nav.setPin'), headerBackVisible: false }} />
-      </Stack.Protected>
-      <Stack.Protected guard={signedIn && hasPin}>
-        <Stack.Screen name="index" options={{ title: t('nav.home'), headerShown: false }} />
-        <Stack.Screen name="scan" options={{ title: t('nav.scan') }} />
-        <Stack.Screen name="pay" options={{ title: t('nav.pay') }} />
-        <Stack.Screen name="receipt/[id]" options={{ title: t('nav.receipt'), headerBackVisible: false }} />
-        <Stack.Screen name="coach/index" options={{ title: t('nav.coach') }} />
-        <Stack.Screen name="coach/savings" options={{ title: t('nav.savings') }} />
-        <Stack.Screen name="coach/forecast" options={{ title: t('nav.forecast') }} />
-        <Stack.Screen name="cashout" options={{ title: t('nav.cashout') }} />
-        <Stack.Screen name="cashin" options={{ title: t('nav.cashin') }} />
-        <Stack.Screen name="send" options={{ title: t('nav.send') }} />
-        <Stack.Screen name="bills" options={{ title: t('nav.bills') }} />
-        <Stack.Screen name="settings" options={{ title: t('nav.settings') }} />
-      </Stack.Protected>
-      {/* Open to everyone, so it must stay last: a guarded-out route (e.g. `/` after an email
-          sign-in link, before a PIN is set) falls back to the first screen it is allowed to see. */}
-      <Stack.Screen name="demo" options={{ title: t('nav.demo'), headerShown: false }} />
-    </Stack>
+    <View style={{ flex: 1 }}>
+      <Stack
+        screenOptions={{
+          headerShadowVisible: false,
+          headerTintColor: colors.text,
+          headerTitleStyle: { fontWeight: '700' },
+          contentStyle: { backgroundColor: colors.background },
+        }}>
+        <Stack.Protected guard={!signedIn}>
+          <Stack.Screen name="sign-in" options={{ title: t('nav.signIn'), headerShown: false }} />
+          <Stack.Screen name="verify" options={{ title: t('nav.verify') }} />
+        </Stack.Protected>
+        <Stack.Protected guard={signedIn && !hasPin}>
+          <Stack.Screen name="set-pin" options={{ title: t('nav.setPin'), headerBackVisible: false }} />
+        </Stack.Protected>
+        <Stack.Protected guard={signedIn && hasPin}>
+          <Stack.Screen name="index" options={{ title: t('nav.home'), headerShown: false }} />
+          <Stack.Screen name="scan" options={{ title: t('nav.scan') }} />
+          <Stack.Screen name="pay" options={{ title: t('nav.pay') }} />
+          <Stack.Screen name="receipt/[id]" options={{ title: t('nav.receipt'), headerBackVisible: false }} />
+          <Stack.Screen name="coach/index" options={{ title: t('nav.coach') }} />
+          <Stack.Screen name="coach/savings" options={{ title: t('nav.savings') }} />
+          <Stack.Screen name="coach/forecast" options={{ title: t('nav.forecast') }} />
+          <Stack.Screen name="cashout" options={{ title: t('nav.cashout') }} />
+          <Stack.Screen name="cashin" options={{ title: t('nav.cashin') }} />
+          <Stack.Screen name="send" options={{ title: t('nav.send') }} />
+          <Stack.Screen name="bills" options={{ title: t('nav.bills') }} />
+          <Stack.Screen name="settings" options={{ title: t('nav.settings') }} />
+        </Stack.Protected>
+        {/* Open to everyone, so it must stay last: a guarded-out route (e.g. `/` after an email
+            sign-in link, before a PIN is set) falls back to the first screen it is allowed to see. */}
+        <Stack.Screen name="demo" options={{ title: t('nav.demo'), headerShown: false }} />
+      </Stack>
+      {signedIn && hasPin && <FloatingCopilot />}
+    </View>
   );
 }

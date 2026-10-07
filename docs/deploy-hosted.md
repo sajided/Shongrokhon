@@ -131,8 +131,11 @@ that allows the camera for the QR scanner.
 3. Add the deployed address to Supabase: Authentication → URL Configuration → **Site URL** and **Redirect URLs**
    (step 4). Sign-in links go nowhere until it is listed.
 
-The admin app (`admin/`) is a separate Vite build; deploy it as its own Vercel project with root directory `admin`
-if analysts need it hosted.
+The admin app (`admin/`) is a separate Vite build and its own Vercel project, `shongrokhon-admin` (linked from
+`admin/`), live at https://shongrokhon-admin.vercel.app. `admin/vercel.json` sets the SPA fallback, a strict CSP, HSTS and `noindex`; `admin/.vercelignore` uploads
+only the build inputs. Its production env holds `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` (the
+same public values as the wallet). Deploy with `cd admin && npx vercel --prod`. Staff sign in with a password, so no
+Supabase redirect URL is needed; create analysts with `scripts/create-analyst.ts` (step 5).
 
 ## Later migrations
 

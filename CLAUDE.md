@@ -67,6 +67,7 @@ npm run ml:seed                # regenerate seed_history.sql only (after editing
 npm run ml:network             # run the ring-detection job once
 npm run ml:bench               # 1,000 sequential /score requests (MLAPI-05)
 npm run ml:paysim              # external validation on PaySim; needs the Kaggle CSV in ml/data/paysim/ (gitignored)
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx tsx scripts/seed-demo-alerts.ts   # demo FLAG alerts on a project with no ML service (hosted demos)
 npm run check:i18n             # no hard-coded UI text (also runs inside npm test)
 npm --prefix admin test        # admin app (Vitest); `npm --prefix admin run dev` serves it on :8766
 npx tsx scripts/perf/payments.ts --sequential 1000   # PERF-01; --concurrency 50 --duration 180 for PERF-02 (then supabase db reset)

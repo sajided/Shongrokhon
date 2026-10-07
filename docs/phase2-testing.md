@@ -57,8 +57,8 @@ Run these **one after the other**, never in parallel. Integration and E2E both r
 
 | Step | Command | What it covers | Expected |
 |---|---|---|---|
-| 1 | `npm run ml:test` | Models, features, service, ring detection, seed personas (XGB-\*, IF-\*, MLAPI-01..04/07..09) | 71 passed |
-| 2 | `docker compose -f ml/docker-compose.yml run --rm --no-deps -v "$PWD":/repo -w /repo/ml ml python -m shongrokhon_ml.evaluate` | Model gates (XGB-03/05/06/11, IF-02..07). Writes `ml/reports/metrics.json` and `pr_curve.png` | 11 lines `PASS`, exit 0 |
+| 1 | `npm run ml:test` | Models, features, service, ring detection, seed personas, PaySim mapping (XGB-\*, IF-\*, MLAPI-01..04/07..09) | 88 passed |
+| 2 | `docker compose -f ml/docker-compose.yml run --rm --no-deps -v "$PWD":/repo -w /repo/ml ml python -m shongrokhon_ml.evaluate` | Model gates (XGB-03/05/06/11, IF-02..07). Writes `ml/reports/metrics.json` (with bootstrap CIs, feature importance and the ablation study) and `pr_curve.png`, `feature_importance.png`, `score_hist.png`, `calibration.png` | 12 lines `PASS`, exit 0 |
 | 3 | `npm run lint && npm run typecheck` | Code quality | clean |
 | 4 | `npm test` | Jest: step-up screen, notices, API client, `pay/score.ts` timeout and fallback (FLOW-03/05) | 106 passed |
 | 5 | `npm run test:db` | pgTAP: decisions, bypass protection, alerts, fallback (FLOW-01..07), SQL = Python feature parity, migration idempotency | 176 tests, `Result: PASS`, `DB-02 ... cleanly` |
@@ -171,7 +171,7 @@ docker exec -i supabase_db_shongrokhon psql -U postgres -c \
 docker logs --since 10m supabase_edge_runtime_shongrokhon 2>&1 | grep -E "risk_|pay_"
 
 # Force a decision for a demo: thresholds live in app_config (restore afterwards!)
-#   review 0.25, flag 0.5, anomaly 0.0, network 0.8, fallback amount 10000, burst 3
+#   review 0.21, flag 0.58, anomaly 0.0, network 0.8, fallback amount 10000, burst 3 (see ml/artifacts/metadata.json)
 docker exec -i supabase_db_shongrokhon psql -U postgres -c "update app_config set risk_review_threshold = 0;"
 ```
 
@@ -190,7 +190,7 @@ docker exec -i supabase_db_shongrokhon psql -U postgres -c "update app_config se
      "update app_config set risk_review_threshold=2, risk_flag_threshold=2, anomaly_threshold=1e9, network_flag_threshold=2;"
    ```
 4. Pay ৳10 repeatedly and time each tap-to-receipt with a stopwatch or screen recording. Alternatively, read the server-side time: the Edge Function logs `risk_scored … total_ms`, and you add the network round trip on top.
-5. Restore the thresholds to 0.25 / 0.5 / 0 / 0.8 and record p50 and p95 in the matrix.
+5. Restore the thresholds to 0.21 / 0.58 / 0 / 0.8 (the `metadata.json` values) and record p50 and p95 in the matrix.
 
 ### 5.2 MLAPI-06 at saturation (P1, ⚠️)
 **Pass criterion:** p95 within the 200 ms budget, with an error rate under 0.1%, for 100 concurrent users over 5 minutes.

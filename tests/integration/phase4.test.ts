@@ -170,7 +170,7 @@ describe('Phase 4: money flows, companion, investigation, Bangla, deletion', () 
     let alertId: string;
     before(async () => {
       // A model-scored FLAG (Phase 2): U-ABUSER pays M-PSEUDO a round ৳10,000. Balance restored after.
-      const undo = await setAppConfig({ risk_review_threshold: 0.25, risk_flag_threshold: 0.5, anomaly_threshold: 0, network_flag_threshold: 0.8,
+      const undo = await setAppConfig({ risk_review_threshold: 0.21, risk_flag_threshold: 0.58, anomaly_threshold: 0, network_flag_threshold: 0.8,
                                         fallback_review_amount: 10000, fallback_burst_count: 3 });
       try {
         const abuser = await signIn('01911000001');

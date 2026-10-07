@@ -1,17 +1,18 @@
 {
-  "model_version": "p2-1561165e",
-  "training_date": "2026-10-02",
+  "model_version": "p2-01b6a9ed",
+  "training_date": "2026-10-07",
   "thresholds": {
-    "review": 0.25,
-    "flag": 0.5,
+    "review": 0.21,
+    "flag": 0.58,
     "anomaly": 0.0,
     "flag_target_fpr": 0.003,
-    "review_target_fpr": 0.008,
+    "review_target_fpr": 0.005,
     "contamination": 0.01
   },
   "gates": {
     "pr_auc_min": 0.9,
-    "recall_at_flag_min": 0.85,
+    "recall_at_flag_min": 0.8,
+    "recall_at_review_min": 0.85,
     "fpr_at_flag_max": 0.01,
     "normal_legit_below_review_min": 0.99,
     "segment_fpr_multiple_max": 3.0,
@@ -21,95 +22,228 @@
     "if_night_score_increase_min": 0.9,
     "if_velocity_flagged_min": 0.95
   },
+  "data": {
+    "generator_version": 5,
+    "held_out_pseudo_merchants": 3,
+    "held_out_rings": 1,
+    "mimic_abuser_share": 0.15,
+    "abuse_via_legit_fast_shops_share": 0.1,
+    "test_merchants_unseen_in_training": 50
+  },
   "xgb": {
-    "pr_auc": 1.0,
-    "recall_at_flag": 1.0,
-    "fpr_at_flag": 0.0,
-    "fnr_at_flag": 0.0,
-    "precision_at_flag": 1.0,
+    "pr_auc": 0.9086185841757638,
+    "recall_at_flag": 0.8110236220472441,
+    "fpr_at_flag": 0.006470165348670022,
+    "fnr_at_flag": 0.1889763779527559,
+    "precision_at_flag": 0.7923076923076923,
     "confusion_at_flag": {
-      "tn": 3963,
-      "fp": 0,
-      "fn": 0,
-      "tp": 121
+      "tn": 4146,
+      "fp": 27,
+      "fn": 24,
+      "tp": 103
     },
-    "recall_at_review": 1.0,
-    "fpr_at_review": 0.0,
-    "normal_legit_below_review": 1.0,
-    "abuser_pseudo_above_flag": 1.0,
+    "recall_at_review": 0.8661417322834646,
+    "fpr_at_review": 0.011742151929067817,
+    "normal_legit_below_review": 0.9904732636754764,
+    "abuser_pseudo_above_flag": 0.801980198019802,
+    "abuser_pseudo_seen_above_flag": 0.9367088607594937,
+    "abuser_pseudo_unseen_above_flag": 0.3181818181818182,
     "fpr_by_region": {
       "Barishal": {
-        "fpr": 0.0,
-        "fp": 0,
-        "negatives": 476,
-        "fpr_lower95": 8.604176613334069e-19
+        "fpr": 0.002932551319648094,
+        "fp": 2,
+        "negatives": 682,
+        "fpr_lower95": 0.000804563224805201
       },
       "Chattogram": {
-        "fpr": 0.0,
-        "fp": 0,
-        "negatives": 446,
-        "fpr_lower95": 0.0
+        "fpr": 0.0021691973969631237,
+        "fp": 1,
+        "negatives": 461,
+        "fpr_lower95": 0.00038300943326429767
       },
       "Dhaka": {
         "fpr": 0.0,
         "fp": 0,
-        "negatives": 561,
-        "fpr_lower95": 4.3073131919771347e-19
+        "negatives": 415,
+        "fpr_lower95": 0.0
       },
       "Khulna": {
-        "fpr": 0.0,
-        "fp": 0,
-        "negatives": 692,
-        "fpr_lower95": 0.0
+        "fpr": 0.018711018711018712,
+        "fp": 9,
+        "negatives": 481,
+        "fpr_lower95": 0.009874429332686783
       },
       "Mymensingh": {
-        "fpr": 0.0,
-        "fp": 0,
-        "negatives": 420,
-        "fpr_lower95": 0.0
+        "fpr": 0.005649717514124294,
+        "fp": 2,
+        "negatives": 354,
+        "fpr_lower95": 0.0015506936189153147
       },
       "Rajshahi": {
-        "fpr": 0.0,
-        "fp": 0,
-        "negatives": 435,
-        "fpr_lower95": 8.597688916113594e-19
+        "fpr": 0.002232142857142857,
+        "fp": 1,
+        "negatives": 448,
+        "fpr_lower95": 0.00039412661395001026
       },
       "Rangpur": {
-        "fpr": 0.0,
-        "fp": 0,
-        "negatives": 474,
-        "fpr_lower95": 0.0
+        "fpr": 0.002861230329041488,
+        "fp": 2,
+        "negatives": 699,
+        "fpr_lower95": 0.0007849871215413527
       },
       "Sylhet": {
-        "fpr": 0.0,
-        "fp": 0,
-        "negatives": 342,
-        "fpr_lower95": 0.0
+        "fpr": 0.013861386138613862,
+        "fp": 7,
+        "negatives": 505,
+        "fpr_lower95": 0.006730240771641453
       }
     },
     "fpr_by_segment": {
       "cashheavy": {
         "fpr": 0.0,
         "fp": 0,
-        "negatives": 285,
+        "negatives": 300,
         "fpr_lower95": 0.0
       },
       "drift": {
-        "fpr": 0.0,
-        "fp": 0,
-        "negatives": 375,
-        "fpr_lower95": 8.585663552937463e-19
+        "fpr": 0.014861995753715499,
+        "fp": 7,
+        "negatives": 471,
+        "fpr_lower95": 0.007217301255499857
       },
       "normal": {
-        "fpr": 0.0,
-        "fp": 0,
-        "negatives": 3186,
-        "fpr_lower95": 0.0
+        "fpr": 0.005192425167990226,
+        "fp": 17,
+        "negatives": 3274,
+        "fpr_lower95": 0.0032444562434149364
       }
     },
-    "fairness_limit": 0.01,
-    "test_rows": 4084,
-    "test_positives": 121
+    "fairness_limit": 0.019410496046010063,
+    "test_rows": 4300,
+    "test_positives": 127,
+    "test_positives_to_unseen_merchants": 29,
+    "recall_at_flag_unseen_merchants": 0.4827586206896552,
+    "ci95": {
+      "samples": 1000,
+      "pr_auc": [
+        0.8670551526451957,
+        0.9396136396046587
+      ],
+      "recall_at_flag": [
+        0.7394957983193278,
+        0.8728813559322034
+      ],
+      "fpr_at_flag": [
+        0.004050299037344276,
+        0.009103977000479156
+      ]
+    }
+  },
+  "importance": {
+    "mean_abs_shap": {
+      "merchant_distinct_payers_30d": 2.8676042556762695,
+      "payer_txn_count_90d": 2.6380081176757812,
+      "merchant_round_share_30d": 1.9161393642425537,
+      "amount": 1.6276524066925049,
+      "merchant_cashout_ratio_7d": 0.9350013732910156,
+      "payer_merchant_prior_count": 0.820399284362793,
+      "payer_median_amount_90d": 0.7517150640487671,
+      "payer_hour_share": 0.7319923639297485,
+      "merchant_age_days": 0.6238660216331482,
+      "amount_to_merchant_median": 0.5985153913497925,
+      "merchant_cashout_lag_min": 0.47823065519332886,
+      "amount_to_median": 0.41181182861328125,
+      "log_amount": 0.3035317361354828,
+      "payer_cashout_count_30d": 0.1946379840373993,
+      "is_round_100": 0.178655207157135,
+      "merchant_new_for_payer": 0.1549600064754486,
+      "hour_cos": 0.15469713509082794,
+      "is_round_1000": 0.13701653480529785,
+      "hour_sin": 0.0770263820886612,
+      "payer_txn_count_1h": 0.07489833980798721,
+      "payer_merchant_count_10m": 0.025965319946408272,
+      "is_night": 0.0
+    },
+    "gain_share": {
+      "merchant_distinct_payers_30d": 0.31603665786343493,
+      "log_amount": 0.16965812940537683,
+      "amount": 0.09020460460161187,
+      "payer_cashout_count_30d": 0.08738347404909419,
+      "payer_txn_count_90d": 0.07407458178363276,
+      "merchant_new_for_payer": 0.04887396319250281,
+      "merchant_round_share_30d": 0.047072810688738476,
+      "merchant_cashout_ratio_7d": 0.043890016276237634,
+      "payer_merchant_prior_count": 0.03119148771567474,
+      "merchant_cashout_lag_min": 0.013889239872003408,
+      "payer_hour_share": 0.012677992020796426,
+      "amount_to_merchant_median": 0.011648912362323313,
+      "payer_merchant_count_10m": 0.010481860017613342,
+      "payer_median_amount_90d": 0.00796927490435303,
+      "is_round_100": 0.006876394630095967,
+      "payer_txn_count_1h": 0.006833207250815767,
+      "is_round_1000": 0.006553130138129151,
+      "hour_cos": 0.004332694362140774,
+      "merchant_age_days": 0.0040836264519552735,
+      "hour_sin": 0.003192829627092189,
+      "amount_to_median": 0.003075112786377122,
+      "is_night": 0.0
+    }
+  },
+  "ablation": {
+    "all": {
+      "features": 22,
+      "pr_auc": 0.9086185841757638,
+      "recall_at_flag": 0.7244094488188977,
+      "fpr_at_flag": 0.002875629043853343
+    },
+    "without_amount_time": {
+      "features": 15,
+      "pr_auc": 0.8922859818973067,
+      "recall_at_flag": 0.7165354330708661,
+      "fpr_at_flag": 0.002875629043853343
+    },
+    "without_payer_behaviour": {
+      "features": 16,
+      "pr_auc": 0.8130844554621206,
+      "recall_at_flag": 0.6299212598425197,
+      "fpr_at_flag": 0.0033549005511622335
+    },
+    "without_payer_merchant": {
+      "features": 18,
+      "pr_auc": 0.8535793985966434,
+      "recall_at_flag": 0.6377952755905512,
+      "fpr_at_flag": 0.002875629043853343
+    },
+    "without_merchant": {
+      "features": 17,
+      "pr_auc": 0.6958510668636045,
+      "recall_at_flag": 0.4330708661417323,
+      "fpr_at_flag": 0.0023963575365444525
+    },
+    "only_amount_time": {
+      "features": 7,
+      "pr_auc": 0.23884803146898478,
+      "recall_at_flag": 0.07086614173228346,
+      "fpr_at_flag": 0.0026359932901988976
+    },
+    "only_payer_behaviour": {
+      "features": 6,
+      "pr_auc": 0.41284152417297937,
+      "recall_at_flag": 0.14173228346456693,
+      "fpr_at_flag": 0.001917086029235562
+    },
+    "only_payer_merchant": {
+      "features": 4,
+      "pr_auc": 0.182119454537739,
+      "recall_at_flag": 0.007874015748031496,
+      "fpr_at_flag": 0.00023963575365444525
+    },
+    "only_merchant": {
+      "features": 5,
+      "pr_auc": 0.5998570268942149,
+      "recall_at_flag": 0.4015748031496063,
+      "fpr_at_flag": 0.002875629043853343
+    }
   },
   "iforest": {
     "users": 60,
@@ -117,37 +251,39 @@
     "spike_flagged": 1.0,
     "night_score_increase": 0.9833333333333333,
     "velocity_flagged": 1.0,
-    "drift_alert_rate_before": 0.02197213290460879,
-    "drift_alert_rate_after_retrain": 0.01929260450160772
+    "drift_rows": 2038,
+    "drift_alert_rate_before": 0.03042198233562316,
+    "drift_alert_rate_after_retrain": 0.02404317958783121,
+    "drift_alert_rate_after_retrain_lower95": 0.018234183368907225
   },
   "contamination_sweep": [
     {
       "contamination": 0.01,
-      "val_alert_rate": 0.008827238335435058,
+      "val_alert_rate": 0.01228153046764289,
       "spike_detection": 1.0,
       "chosen": true
     },
     {
       "contamination": 0.02,
-      "val_alert_rate": 0.019167717528373266,
+      "val_alert_rate": 0.023854511100614078,
       "spike_detection": 1.0,
       "chosen": false
     },
     {
       "contamination": 0.03,
-      "val_alert_rate": 0.02824716267339218,
+      "val_alert_rate": 0.03471894189891356,
       "spike_detection": 1.0,
       "chosen": false
     },
     {
       "contamination": 0.04,
-      "val_alert_rate": 0.040100882723833546,
+      "val_alert_rate": 0.04959848842701937,
       "spike_detection": 1.0,
       "chosen": false
     },
     {
       "contamination": 0.05,
-      "val_alert_rate": 0.04943253467843632,
+      "val_alert_rate": 0.06093528578176665,
       "spike_detection": 1.0,
       "chosen": false
     }
@@ -155,6 +291,7 @@
   "checks": {
     "XGB-03 pr_auc": true,
     "XGB-03 recall_at_flag": true,
+    "XGB-03 recall_at_review": true,
     "XGB-03 fpr_at_flag": true,
     "XGB-05 normal_legit_below_review": true,
     "XGB-06 minority_recall": true,

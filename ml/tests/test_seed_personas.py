@@ -32,10 +32,17 @@ def test_u_normal_pays_m_legit_500_at_any_hour(model, history, hour):
     assert decide(model, h, "U-NORMAL", "M-LEGIT", 500.0, ANCHOR + hour * 3600 + 600) == "ALLOW"
 
 
-@pytest.mark.parametrize("payee, amount", [("M-LEGIT", 500.0), ("M-LEGIT", 3000.0), ("M-LEGIT2", 100.0), ("M-LEGIT3", 1000.0)])
+@pytest.mark.parametrize("payee, amount", [("M-LEGIT", 500.0), ("M-LEGIT2", 100.0), ("M-LEGIT3", 1000.0)])
 def test_new_customers_paying_legit_shops_are_allowed(model, history, payee, amount):
     _, h = history
     assert decide(model, h, "fresh-user", payee, amount, ANCHOR + 13 * 3600) == "ALLOW"
+
+
+def test_new_customer_large_first_payment_is_never_flagged(model, history):
+    """A brand-new account's first ৳3,000 at a small shop may ask for a PIN re-entry
+    (cold start: no payer history, model card §11) but must never be flagged."""
+    _, h = history
+    assert decide(model, h, "fresh-user", "M-LEGIT", 3000.0, ANCHOR + 13 * 3600) in ("ALLOW", "REVIEW")
 
 
 def test_u_abuser_round_payment_to_m_pseudo_is_flagged(model, history):

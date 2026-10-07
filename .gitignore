@@ -62,3 +62,6 @@ __pycache__/
 public/zxing/
 .vercel
 .env*.local
+
+# PaySim CSV for npm run ml:paysim (downloaded manually)
+ml/data/

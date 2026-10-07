@@ -1,0 +1,11 @@
+# Upload only what the admin build needs. node_modules and dist are rebuilt on Vercel.
+/*
+!/src
+!/index.html
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/vite.config.ts
+!/vercel.json
+/src/**/*.test.ts
+/src/**/*.test.tsx

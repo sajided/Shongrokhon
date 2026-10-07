@@ -112,6 +112,8 @@ supabase stop
 ## Live deployment URL
 **Live app:** [shongrokhon.vercel.app](https://shongrokhon.vercel.app)
 
+**Investigation Assistant (analysts):** [shongrokhon-admin.vercel.app](https://shongrokhon-admin.vercel.app)
+
 *Note: The hosted project has no seeded test users. To try the app with the test personas, run it locally.*
 
 ## Testing instructions

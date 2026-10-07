@@ -4,6 +4,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { AboutSection } from '@/components/AboutSection';
+import { FaqSection } from '@/components/FaqSection';
 import { Body, Button, colors, ErrorBanner, Field, Screen, Text, Title } from '@/components/ui';
 import { useSession } from '@/hooks/session';
 import { useI18n } from '@/i18n/LocaleProvider';
@@ -84,6 +86,13 @@ export default function Settings() {
       <Toggle label={t('settings.nudges')} value={profile?.nudges_enabled ?? true} onChange={setNudges} testID="toggle-nudges" />
       <Body muted>{t('settings.nudgesHelp')}</Body>
 
+      <View style={styles.sectionDivider} />
+      <AboutSection variant="app" />
+
+      <View style={styles.sectionDivider} />
+      <FaqSection variant="app" />
+
+      <View style={styles.sectionDivider} />
       <Title>{t('settings.delete')}</Title>
       <Body muted>{t('settings.deleteHelp')}</Body>
       {deleting ? (
@@ -110,4 +119,5 @@ const styles = StyleSheet.create({
   sampleLabel: { fontSize: 13, color: colors.muted },
   sampleText: { fontSize: 18, color: colors.text },
   danger: { backgroundColor: colors.dangerSurface, borderRadius: 12, padding: 12, gap: 12 },
+  sectionDivider: { height: 1, backgroundColor: colors.border, marginVertical: 16 },
 });

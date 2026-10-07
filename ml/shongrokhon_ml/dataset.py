@@ -8,11 +8,11 @@ from pathlib import Path
 import pandas as pd
 
 from . import features as F
-from .synth import DAY, DAY0, GENERATOR_VERSION, SynthConfig, generate, labelled_window
+from .synth import DAY, DAY0, GENERATOR_VERSION, TEST_START_DAY, SynthConfig, generate, labelled_window
 
 # Time windows inside the labelled period (days since DAY0).
-TRAIN_END_DAY = 120  # months 1-4
-VAL_END_DAY = 151    # month 5; month 6 is test
+TRAIN_END_DAY = 120           # months 1-4
+VAL_END_DAY = TEST_START_DAY  # month 5; month 6 is test (held-out merchants open here)
 
 CACHE_DIR = Path(os.environ.get("ML_CACHE_DIR", Path(__file__).resolve().parents[1] / ".cache"))
 
@@ -33,7 +33,10 @@ def build(cfg: SynthConfig = SynthConfig(), use_cache: bool = True) -> tuple[pd.
     txn_id, payer, payee, ts, label, segment, region, payee_segment, user_split, time_split, split.
     `split` is set only where the user and time assignments agree; other rows have split=None.
     """
-    key = hashlib.sha1(repr((GENERATOR_VERSION, sorted(cfg.__dict__.items()), F.FEATURES)).encode()).hexdigest()[:12]
+    # The key also covers the generator's source, so editing synth.py without
+    # bumping GENERATOR_VERSION cannot serve a stale dataset.
+    synth_src = hashlib.sha1((Path(__file__).parent / "synth.py").read_bytes()).hexdigest()[:8]
+    key = hashlib.sha1(repr((GENERATOR_VERSION, synth_src, sorted(cfg.__dict__.items()), F.FEATURES)).encode()).hexdigest()[:12]
     cache = CACHE_DIR / f"dataset-{key}.pkl"
     if use_cache and cache.exists():
         return pd.read_pickle(cache)

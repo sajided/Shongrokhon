@@ -10,8 +10,8 @@
 -- ml/tests/test_thresholds_in_sync.py keeps these defaults in step with it.
 --------------------------------------------------------------------------------
 alter table public.app_config
-  add column if not exists risk_review_threshold float8 not null default 0.25,
-  add column if not exists risk_flag_threshold float8 not null default 0.5,
+  add column if not exists risk_review_threshold float8 not null default 0.21,
+  add column if not exists risk_flag_threshold float8 not null default 0.58,
   add column if not exists anomaly_threshold float8 not null default 0.0,
   add column if not exists network_flag_threshold float8 not null default 0.8,
   add column if not exists ml_timeout_ms int not null default 800,

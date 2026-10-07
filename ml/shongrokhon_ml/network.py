@@ -44,6 +44,11 @@ LOUVAIN_RESOLUTION = 0.5  # favour whole rings over splitting them per merchant
 MIN_RING_SIZE = 5
 MIN_REPEAT_PAYMENTS = 2
 NON_RING_DAMPING = 0.5  # a merchant outside any ring stays below the FLAG override
+MIN_MERCHANT_PAYMENTS = 10  # too few receipts to judge a merchant's habits (a new shop is not a mule)
+SESSION_WINDOW_MIN = 30     # ring members pay in coordinated sessions: minutes apart, not hours
+                            # (a busy pseudo merchant used by unrelated abusers has another payer
+                            # within 2 h by chance, but rarely within 30 min)
+MIN_SESSION_SHARE = 0.5     # share of a group's payments that have another member paying in the same session
 
 
 @dataclass
@@ -71,6 +76,22 @@ def mirrored_share(receipts: pd.DataFrame, cashouts: pd.DataFrame) -> float:
     return hits / len(receipts)
 
 
+def session_share(flows: pd.DataFrame) -> float:
+    """Share of a group's payments made within SESSION_WINDOW_MIN of a payment by a
+    *different* member of the group. Rings move money in coordinated sessions;
+    unrelated abusers who happen to share a pseudo merchant do not."""
+    if len(flows) < 2:
+        return 0.0
+    f = flows.sort_values("ts", kind="mergesort")
+    ts, payers = f.ts.to_numpy(), f.payer.to_numpy()
+    w = SESSION_WINDOW_MIN * 60
+    hits = 0
+    for i, (t, p) in enumerate(zip(ts, payers)):
+        lo, hi = np.searchsorted(ts, t - w, side="left"), np.searchsorted(ts, t + w, side="right")
+        hits += bool((payers[lo:hi] != p).any())
+    return hits / len(flows)
+
+
 def merchant_suspicion(events: pd.DataFrame, now: int) -> pd.DataFrame:
     """events: type, payer, payee, amount, ts (see synth.py). Merchants = PAYMENT payees."""
     start = now - WINDOW_DAYS * 86400
@@ -90,7 +111,8 @@ def merchant_suspicion(events: pd.DataFrame, now: int) -> pd.DataFrame:
             "merchant": m, "received": received, "payments": len(g), "payers": g.payer.nunique(),
             "cashout_ratio": ratio, "round_share": round_share, "fast_share": fast,
             "suspicion": 0.35 * ratio + 0.35 * round_share + 0.3 * fast,
-            "suspicious": ratio >= MIN_CASHOUT_RATIO and max(round_share, fast) >= MIN_PATTERN_SHARE,
+            "suspicious": len(g) >= MIN_MERCHANT_PAYMENTS and ratio >= MIN_CASHOUT_RATIO
+                          and max(round_share, fast) >= MIN_PATTERN_SHARE,
         })
     return pd.DataFrame(rows, columns=["merchant", "received", "payments", "payers", "cashout_ratio",
                                        "round_share", "fast_share", "suspicion", "suspicious"])
@@ -129,6 +151,8 @@ def detect(events: pd.DataFrame, now: int) -> tuple[list[Ring], dict[str, float]
             inner = sub.subgraph(community)
             flows = pay[pay.payer.isin(payers) & pay.payee.isin(ms)]
             if np.mean(np.round(flows.amount.to_numpy() * 100) % ROUND_CENTS == 0) < MIN_RING_ROUND_SHARE:
+                continue
+            if session_share(flows) < MIN_SESSION_SHARE:
                 continue
             rings.append(Ring(
                 payers=payers, merchants=ms,

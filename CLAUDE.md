@@ -5,6 +5,7 @@ Project Shongrokhon is an MFS wallet with an AI financial coach.
 - Test plan: `testcase.md`, with test IDs like `TC-P1-PAY-01`.
 - Results: `docs/phase1-test-matrix.md` … `docs/phase4-test-matrix.md`. Update the matrix whenever tests change.
 - How to run the tests (automated + manual walkthrough): `docs/phase2-testing.md`, `docs/phase3-testing.md`, `docs/phase4-testing.md`. Security review: `docs/security-review.md`.
+- ML write-ups for reviewers: `docs/ml-model-card.md` (risk models: data, features, thresholds, measured performance, PaySim validation) and `docs/ai-architecture.md` (how the coach and investigation assistant keep the LLM grounded). Keep their numbers in step with `ml/reports/*.json` and `reports/*.json`.
 
 ## Scope
 - **Web app only.** Expo SDK 57 renders to the web through react-native-web, using expo-router with `web.output: "single"` (SPA). Do not add iOS/Android code, native config plugins, EAS, or Maestro.
@@ -65,6 +66,7 @@ npm run ml:train               # retrain, evaluate gates, regenerate parity test
 npm run ml:seed                # regenerate seed_history.sql only (after editing seed_export.py)
 npm run ml:network             # run the ring-detection job once
 npm run ml:bench               # 1,000 sequential /score requests (MLAPI-05)
+npm run ml:paysim              # external validation on PaySim; needs the Kaggle CSV in ml/data/paysim/ (gitignored)
 npm run check:i18n             # no hard-coded UI text (also runs inside npm test)
 npm --prefix admin test        # admin app (Vitest); `npm --prefix admin run dev` serves it on :8766
 npx tsx scripts/perf/payments.ts --sequential 1000   # PERF-01; --concurrency 50 --duration 180 for PERF-02 (then supabase db reset)
@@ -145,7 +147,7 @@ npx tsx scripts/eval-coach.ts          # live LLM gates (LLM-01/04/05/06/09); ne
 - Phase 1 still needs a manual run in a real phone browser: PAY-01, QR-08 and QR-09.
 - GoTrue's direct `/auth/v1/verify` endpoint bypasses the OTP lockout. Only the per-IP rate limit protects it.
 - The session token is stored in `localStorage`; both apps ship a strict CSP (`public/index.html`, `admin/index.html`). When deployed, also send it as a header, with `frame-ancestors 'none'` and HSTS.
-- Phase 2 models are trained on synthetic data (`ml/shongrokhon_ml/synth.py`). Their metrics validate the pipeline, not real-world accuracy; retrain on real labelled data before production.
+- Phase 2 models are trained on synthetic data (`ml/shongrokhon_ml/synth.py`, generator v5: held-out mule merchants, mimicking abusers, abuse through legit fast shops; the knobs are `SynthConfig` fields). Their metrics validate the pipeline, not real-world accuracy; `npm run ml:paysim` is the only independent check. Retrain on real labelled data before production. Changing the generator moves the calibrated thresholds: update the `app_config` defaults in `20261002000006_risk.sql`, add an `update app_config` migration, and refresh the docs that quote them.
 - Ring alerts flag wallets but do not notify ring members (to avoid tipping them off). Analyst review is Phase 4.
 - After changing `coach/prompts.ts`, `investigate/evidence.ts` prompts or `COACH_MODEL`, re-run `scripts/eval-coach.ts` and `scripts/eval-phase4.ts` (live, cost money) and bump `PROMPT_VERSION`.
 - Release items still needing people or hardware:

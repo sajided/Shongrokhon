@@ -69,6 +69,7 @@
     "ml:seed": "docker compose -f ml/docker-compose.yml run --rm --no-deps -v \"$PWD\":/repo -w /repo/ml ml python -m shongrokhon_ml.seed_export",
     "ml:test": "docker compose -f ml/docker-compose.yml run --rm --no-deps -v \"$PWD\":/repo -w /repo/ml ml python -m pytest -q",
     "ml:network": "docker compose -f ml/docker-compose.yml run --rm network-job python -m shongrokhon_ml.network --once",
+    "ml:paysim": "docker compose -f ml/docker-compose.yml run --rm --no-deps -v \"$PWD\":/repo -w /repo/ml ml python -m shongrokhon_ml.paysim",
     "ml:bench": "docker compose -f ml/docker-compose.yml run --rm --no-deps ml python bench/latency.py --url http://shongrokhon-ml:8000 --sequential 1000"
   },
   "private": true

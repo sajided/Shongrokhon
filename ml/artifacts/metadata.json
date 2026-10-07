@@ -1,7 +1,8 @@
 {
-  "model_version": "p2-1561165e",
-  "training_date": "2026-10-02",
+  "model_version": "p2-01b6a9ed",
+  "training_date": "2026-10-07",
   "seed": 42,
+  "generator_version": 5,
   "synth_config": {
     "seed": 42,
     "n_normal": 1000,
@@ -11,7 +12,15 @@
     "n_rings": 4,
     "ring_size": 8,
     "n_legit_merchants": 120,
-    "n_pseudo_merchants": 10
+    "n_pseudo_merchants": 10,
+    "holdout_pseudo": 3,
+    "holdout_rings": 1,
+    "mimic_share": 0.15,
+    "abuser_legit_share": 0.1,
+    "pseudo_cashout_lo": 0.4,
+    "pseudo_lag_hi_max": 600.0,
+    "cover_share": 0.08,
+    "fast_shop_share": 0.25
   },
   "features": [
     "amount",
@@ -44,41 +53,41 @@
     "payer_merchant_count_10m"
   ],
   "feature_defaults": {
-    "amount": 850.0,
-    "log_amount": 6.7464121285733745,
+    "amount": 910.0,
+    "log_amount": 6.814542897259958,
     "is_round_100": 0.0,
     "is_round_1000": 0.0,
     "hour_sin": -0.4999999999999997,
     "hour_cos": -0.5000000000000004,
     "is_night": 0.0,
-    "payer_txn_count_90d": 72.0,
-    "payer_median_amount_90d": 850.0,
+    "payer_txn_count_90d": 75.0,
+    "payer_median_amount_90d": 950.0,
     "amount_to_median": 1.0,
-    "payer_hour_share": 0.3235294117647059,
+    "payer_hour_share": 0.3258426966292135,
     "payer_cashout_count_30d": 0.0,
     "payer_txn_count_1h": 0.0,
     "payer_merchant_prior_count": 17.0,
     "amount_to_merchant_median": 1.0,
     "merchant_new_for_payer": 0.0,
     "payer_merchant_count_10m": 0.0,
-    "merchant_distinct_payers_30d": 68.0,
-    "merchant_round_share_30d": 0.02631578947368421,
-    "merchant_cashout_ratio_7d": 0.3620412767304128,
-    "merchant_cashout_lag_min": 72.51666666666667,
-    "merchant_age_days": 149.500625
+    "merchant_distinct_payers_30d": 100.0,
+    "merchant_round_share_30d": 0.029411764705882353,
+    "merchant_cashout_ratio_7d": 0.35448034226296526,
+    "merchant_cashout_lag_min": 44.03333333333333,
+    "merchant_age_days": 149.02950810185183
   },
   "thresholds": {
-    "review": 0.25,
-    "flag": 0.5,
+    "review": 0.21,
+    "flag": 0.58,
     "anomaly": 0.0,
     "flag_target_fpr": 0.003,
-    "review_target_fpr": 0.008,
+    "review_target_fpr": 0.005,
     "contamination": 0.01
   },
   "low_confidence_min_txns": 5,
   "rows": {
-    "train": 76245,
-    "val": 4182,
-    "test": 4084
+    "train": 77140,
+    "val": 4442,
+    "test": 4300
   }
 }

@@ -35,6 +35,22 @@ The hosted project has no seeded test users. To try the app with the test person
   - **Edge Functions:** `otp` (attempt counting, lockout, expiry), `pay` (risk scoring before payment), `coach` (LLM insights) and `investigate` (analyst summaries).
 - **ML service** (`ml/`): Python, FastAPI, XGBoost, Isolation Forest and networkx. Runs in Docker.
 
+## AI / ML at a glance
+
+Full write-ups: the [risk model card](docs/ml-model-card.md) (data, features, calibration, measured performance, ablation, fairness, PaySim validation) and the [AI coach architecture](docs/ai-architecture.md) (how the LLM is kept grounded, private and optional). Every number traces to a committed report under `ml/reports/` or `reports/`.
+
+| What | How | Measured (synthetic hold-out unless noted) |
+|---|---|---|
+| Disguised cash-out risk score | XGBoost on 22 point-in-time features (payer behaviour, payer × merchant, merchant cash-out habits), thresholds calibrated to target false-positive rates, SQL twin of every feature with a parity test | PR-AUC 0.91 (95 % CI 0.87–0.94), recall 0.81 at FLAG and 0.87 at FLAG-or-step-up, FPR 0.65 %, on users, a month and 50 merchants never seen in training; 94 % recall on channels seen in training |
+| Behavioural anomaly | Isolation Forest on user-relative features (ticket vs usual, hour share, velocity) | 10× ticket 60/60 flagged, in-pattern 60/60 not, drift absorbed by rolling retrain |
+| Fraud rings | Hourly bipartite graph job with Louvain, merchant suspicion score, session-coordination test, FLAG override | 4/4 simulated rings found, including one that only starts in the test month; no group of unrelated abusers mistaken for one |
+| Explainability | Exact TreeSHAP via `/explain`, rendered as plain-language drivers for analysts | Drivers match the summaries in 2/2 evaluated alerts |
+| External validation | Same pipeline retrained on PaySim (public mobile-money dataset) | `npm run ml:paysim` after downloading the CSV |
+| Cash-flow forecast | Deterministic recurring-item detection + daily baseline, no LLM | Median 30-day error 11 % of income, 65 % better than naive, backtest on 50 users |
+| AI coach | SQL facts → LLM writes `{{placeholders}}` only → grounding validator → template fallback; no PII, every call audited | 99 % categorisation accuracy, 100 % grounded insights, 20/20 regulated questions declined, p95 4.8 s |
+
+Everything above is trained and measured on synthetic data; the model card says what that does and does not prove.
+
 ## Setup
 
 ```bash

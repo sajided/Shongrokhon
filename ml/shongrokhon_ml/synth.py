@@ -25,13 +25,17 @@ import numpy as np
 import pandas as pd
 
 # Bump when the simulation changes so model versions change with it.
-GENERATOR_VERSION = 4
+GENERATOR_VERSION = 5
 DAY = 86400
 # Day 0 of the labelled window. History starts BURN_IN_DAYS earlier so that the
 # 90-day payer features are fully populated for the first labelled rows.
 DAY0 = int(datetime(2026, 1, 1, tzinfo=timezone.utc).timestamp())
 BURN_IN_DAYS = 90
 WINDOW_DAYS = 182
+# First day of the hold-out month (dataset.VAL_END_DAY). Held-out pseudo merchants
+# and rings only start operating here, so the test split contains cash-out
+# channels the models never saw in training.
+TEST_START_DAY = 151
 DHAKA_OFFSET = 6 * 3600
 
 REGIONS = ["Dhaka", "Chattogram", "Khulna", "Rajshahi", "Barishal", "Sylhet", "Rangpur", "Mymensingh"]
@@ -55,6 +59,16 @@ class SynthConfig:
     ring_size: int = 8
     n_legit_merchants: int = 120
     n_pseudo_merchants: int = 10
+    # Realism knobs (generator v5). Each one removes a shortcut the models could
+    # otherwise learn, so the hold-out scores reflect a genuinely hard problem.
+    holdout_pseudo: int = 3          # pseudo merchants that only open in the hold-out month
+    holdout_rings: int = 1           # rings that only start cycling money in the hold-out month
+    mimic_share: float = 0.15        # abusers who use in-pattern amounts and their own hours
+    abuser_legit_share: float = 0.1  # share of abuse payments routed through legit "fast" shops
+    pseudo_cashout_lo: float = 0.4   # lowest per-receipt cash-out probability of a pseudo merchant
+    pseudo_lag_hi_max: float = 600.0 # slowest pseudo merchants cash out up to this many minutes later
+    cover_share: float = 0.08        # share of random-shop traffic that is legit spending at pseudo merchants
+    fast_shop_share: float = 0.25    # legit shops that cash out receipts within hours
 
 
 def local_ts(day: int, hour: float) -> int:
@@ -111,31 +125,51 @@ def generate(cfg: SynthConfig = SynthConfig()) -> tuple[pd.DataFrame, pd.DataFra
     legit = []
     for i in range(cfg.n_legit_merchants):
         start = first_day - 200 if rng.random() < 0.8 else int(rng.integers(first_day, last_day - 30))
-        # ~15% of real shops cash out each receipt quickly (hard negatives for the cash-out features).
-        m = {"id": f"m{i:03d}", "cat": cats[i % len(cats)], "start": start, "fast": bool(rng.random() < 0.15)}
+        # Some real shops cash out each receipt quickly (hard negatives for the cash-out features).
+        m = {"id": f"m{i:03d}", "cat": cats[i % len(cats)], "start": start, "fast": bool(rng.random() < cfg.fast_shop_share),
+             # Heavy-tailed popularity: a few busy shops and many small ones, so a
+             # merchant's number of customers is not a label proxy.
+             "pop": float(rng.pareto(1.0) + 1)}
         legit.append(m)
         b.add_wallet(m["id"], "merchant", "legit", start)
+    # The last `holdout_pseudo` pseudo merchants only open in the hold-out month:
+    # new mule merchants the model has never seen (the real-world case).
     pseudo = [f"p{i:02d}" for i in range(cfg.n_pseudo_merchants)]
+    pseudo_open = {p: TEST_START_DAY if i >= cfg.n_pseudo_merchants - cfg.holdout_pseudo else first_day
+                   for i, p in enumerate(pseudo)}
     for p in pseudo:
-        b.add_wallet(p, "merchant", "pseudo", first_day)
+        b.add_wallet(p, "merchant", "pseudo", pseudo_open[p])
     ring_merchants = [[f"r{r}m{j}" for j in range(2)] for r in range(cfg.n_rings)]
-    for pair in ring_merchants:
+    ring_open = [TEST_START_DAY if r >= cfg.n_rings - cfg.holdout_rings else first_day for r in range(cfg.n_rings)]
+    for pair, start in zip(ring_merchants, ring_open):
         for p in pair:
-            b.add_wallet(p, "merchant", "ring_pseudo", first_day)
+            b.add_wallet(p, "merchant", "ring_pseudo", start)
 
     def legit_open(day: int) -> list[dict]:
         return [m for m in legit if m["start"] <= day]
+
+    def pseudo_open_on(day: int) -> list[str]:
+        return [p for p in pseudo if pseudo_open[p] <= day]
+
+    def fast_open(day: int) -> list[dict]:
+        return [m for m in legit if m["fast"] and m["start"] <= day]
+
+    def pick_legit(pool: list[dict], size: int = 1) -> list[dict]:
+        """Sample shops in proportion to their popularity (without replacement)."""
+        p = np.array([m["pop"] for m in pool])
+        idx = rng.choice(len(pool), size=min(size, len(pool)), replace=False, p=p / p.sum())
+        return [pool[int(i)] for i in idx]
 
     # --- customers ---------------------------------------------------------------
     def customer_start() -> int:
         return first_day if rng.random() < 0.85 else int(rng.integers(first_day, last_day - 20))
 
-    def normal_payments(cid: str, start: int, rate: float, drift: bool = False, end: int = last_day) -> None:
-        profile = b.hour_profile()
+    def normal_payments(cid: str, start: int, rate: float, drift: bool = False, end: int = last_day,
+                        profile: tuple[float, float] | None = None) -> None:
+        profile = profile or b.hour_profile()
         scale = float(rng.lognormal(0, 0.3))
         open_now = [m for m in legit_open(start)] or legit
-        favs = list(rng.choice(len(open_now), size=min(len(open_now), int(rng.integers(3, 8))), replace=False))
-        favs = [open_now[k] for k in favs]
+        favs = pick_legit(open_now, int(rng.integers(3, 8)))
         weights = rng.dirichlet(np.ones(len(favs)))
         alt_favs = None
         for day in range(start, end):
@@ -144,20 +178,19 @@ def generate(cfg: SynthConfig = SynthConfig()) -> tuple[pd.DataFrame, pd.DataFra
             if drift and day > 90:
                 progress = min(1.0, (day - 90) / 90)
                 if alt_favs is None:
-                    pool = legit_open(day)
-                    alt_favs = [pool[k] for k in rng.choice(len(pool), size=min(len(pool), 4), replace=False)]
+                    alt_favs = pick_legit(legit_open(day), 4)
             for _ in range(rng.poisson(rate / 30)):
                 if alt_favs is not None and rng.random() < progress:
                     m = alt_favs[int(rng.integers(len(alt_favs)))]
                 elif rng.random() < 0.9:
                     m = favs[int(rng.choice(len(favs), p=weights))]
                 else:
-                    if rng.random() < 0.04:  # occasional legitimate payment to a pseudo merchant (cover traffic)
-                        b.pay(cid, pseudo[int(rng.integers(len(pseudo)))], round_amount(rng, rng.uniform(100, 900)),
+                    open_pseudo = pseudo_open_on(day)
+                    if open_pseudo and rng.random() < cfg.cover_share:  # legitimate payment to a pseudo merchant (cover traffic)
+                        b.pay(cid, open_pseudo[int(rng.integers(len(open_pseudo)))], round_amount(rng, rng.uniform(100, 900)),
                               local_ts(day, b.sample_hour(profile)))
                         continue
-                    pool = legit_open(day)
-                    m = pool[int(rng.integers(len(pool)))]
+                    m = pick_legit(legit_open(day))[0]
                 if m["start"] > day:
                     continue
                 hour = b.sample_hour(profile, shift=4 * progress)
@@ -199,26 +232,45 @@ def generate(cfg: SynthConfig = SynthConfig()) -> tuple[pd.DataFrame, pd.DataFra
             for _ in range(rng.poisson(rng.uniform(8, 15) / 30)):
                 b.cashout(c, float(rng.choice([500, 1000, 1500, 2000, 3000, 5000])), local_ts(day, rng.uniform(9, 21)))
 
-    # Abusers: some background spending plus round-amount payments to a pseudo merchant.
+    # Abusers: some background spending plus disguised cash-outs through a pseudo
+    # merchant. "Mimics" copy their own spending pattern (in-pattern amounts, their
+    # usual hours); some abuse goes through legit fast shops, so the merchant's
+    # cash-out habits alone cannot separate the classes.
+    # Abusers join at the same rate as everyone else (customer_start), so account
+    # age is not a label proxy: a brand-new customer paying a shop must stay ALLOW.
     for _ in range(cfg.n_abuser):
-        start = first_day if rng.random() < 0.6 else int(rng.integers(first_day, last_day - 20))
+        start = customer_start()
         c = new_customer("abuser", start)
-        normal_payments(c, start, float(rng.uniform(3, 12)))
+        profile = b.hour_profile()
+        normal_payments(c, start, float(rng.uniform(3, 12)), profile=profile)
+        mimic = rng.random() < cfg.mimic_share
         targets = list(rng.choice(pseudo, size=int(rng.integers(1, 3)), replace=False))
         rate = float(rng.uniform(4, 12))
         for day in range(start, last_day):
             for _ in range(rng.poisson(rate / 30)):
-                amt = float(rng.choice(ABUSE_AMOUNTS))
-                if rng.random() < 0.25:  # some abusers avoid perfectly round amounts
-                    amt += float(rng.choice([50, 150, 250]))
-                b.pay(c, targets[int(rng.integers(len(targets)))], amt, local_ts(day, rng.uniform(8, 23.5)), label=1)
+                if mimic:
+                    amt = round_amount(rng, rng.uniform(600, 4000))
+                    hour = b.sample_hour(profile)
+                else:
+                    amt = float(rng.choice(ABUSE_AMOUNTS))
+                    if rng.random() < 0.25:  # some abusers avoid perfectly round amounts
+                        amt += float(rng.choice([50, 150, 250]))
+                    hour = float(rng.uniform(8, 23.5))
+                fast_shops = fast_open(day)
+                if fast_shops and rng.random() < cfg.abuser_legit_share:
+                    payee = fast_shops[int(rng.integers(len(fast_shops)))]["id"]
+                else:
+                    payee = targets[int(rng.integers(len(targets)))]
+                    if pseudo_open[payee] > day:
+                        continue
+                b.pay(c, payee, amt, local_ts(day, hour), label=1)
 
     # Rings (RING-01 shape): members cycle money through their two dedicated merchants.
     for r in range(cfg.n_rings):
         members = [new_customer("ring", first_day) for _ in range(cfg.ring_size)]
         for c in members:
             normal_payments(c, first_day, float(rng.uniform(3, 10)))
-        for day in range(first_day, last_day):
+        for day in range(ring_open[r], last_day):
             if rng.random() < 0.35:  # a coordinated "session"
                 hour = float(rng.uniform(10, 22))
                 for c in members:
@@ -240,8 +292,8 @@ def generate(cfg: SynthConfig = SynthConfig()) -> tuple[pd.DataFrame, pd.DataFra
     fast = {m["id"] for m in legit if m["fast"]}
     # (cash-out probability per receipt, min lag, max lag in minutes). Ring
     # merchants exist to cycle money out, so they cash out nearly everything.
-    habits = {w: (rng.uniform(0.8, 0.98) if seg == "ring_pseudo" else rng.uniform(0.55, 0.95),
-                  rng.uniform(3, 30), rng.uniform(40, 240))
+    habits = {w: (rng.uniform(0.8, 0.98) if seg == "ring_pseudo" else rng.uniform(cfg.pseudo_cashout_lo, 0.95),
+                  rng.uniform(3, 30), rng.uniform(40, cfg.pseudo_lag_hi_max))
               for w, seg in merchant_seg.items() if seg in ("pseudo", "ring_pseudo")}
     for m, grp in pay.groupby("payee", sort=True):
         if m in fast:

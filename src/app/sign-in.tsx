@@ -1,9 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useRef, useState, type ComponentProps, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type ViewStyle } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AboutSection } from '@/components/AboutSection';
+import { FaqSection } from '@/components/FaqSection';
 import { Button, ErrorBanner, Field, Text, colors } from '@/components/ui';
 import type { TranslationKey } from '@/i18n/en';
 import { useI18n } from '@/i18n/LocaleProvider';
@@ -79,7 +81,17 @@ export default function SignIn() {
     return code ? msg(code) : null;
   });
   const [linkSentTo, setLinkSentTo] = useState<string | null>(null);
+  const [aboutY, setAboutY] = useState(0);
+  const [faqY, setFaqY] = useState(0);
   const email = AUTH_METHOD === 'email';
+
+  const scrollToAbout = () => {
+    scroll.current?.scrollTo({ y: Math.max(0, aboutY - 24), animated: true });
+  };
+
+  const scrollToFaq = () => {
+    scroll.current?.scrollTo({ y: Math.max(0, faqY - 24), animated: true });
+  };
 
   const submit = async () => {
     const to = email ? normalizeEmail(value) : normalizeBdPhone(value);
@@ -109,7 +121,7 @@ export default function SignIn() {
         keyboardShouldPersistTaps="handled">
         <View style={[styles.frame, medium && styles.frameWide]}>
           {/* Hero: brand, headline and the sign-in form. */}
-          <Band color={tone.grey} first z={5} style={[styles.hero, medium && styles.heroWide]}>
+          <Band color={tone.grey} first z={7} style={[styles.hero, medium && styles.heroWide]}>
             <View style={styles.topBar}>
               <View style={styles.brandPill}>
                 <View style={styles.logoSmall}>
@@ -117,20 +129,42 @@ export default function SignIn() {
                 </View>
                 <Text style={styles.brandName} numberOfLines={1}>{t('signIn.brandBadge')}</Text>
               </View>
-              <View style={styles.langSwitch} accessibilityRole="radiogroup" accessibilityLabel={t('signIn.language')}>
-                {(['en', 'bn'] as const).map((l) => (
+              <View style={styles.topNavRight}>
+                <View style={styles.topNavPills}>
                   <Pressable
-                    key={l}
-                    testID={`signin-lang-${l}`}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: locale === l }}
-                    onPress={() => setLanguage(l)}
-                    style={[styles.langOption, locale === l && styles.langOptionOn]}>
-                    <Text style={[styles.langText, locale === l && styles.langTextOn]}>
-                      {t(l === 'en' ? 'settings.english' : 'settings.bangla')}
-                    </Text>
+                    testID="top-nav-about"
+                    accessibilityRole="button"
+                    accessibilityLabel={t('signIn.navAbout')}
+                    onPress={scrollToAbout}
+                    style={({ pressed }) => [styles.topNavPill, pressed && { opacity: 0.7 }]}>
+                    <Ionicons name="information-circle-outline" size={13} color={colors.text} />
+                    <Text style={styles.topNavPillText}>{t('signIn.navAbout')}</Text>
                   </Pressable>
-                ))}
+                  <Pressable
+                    testID="top-nav-faq"
+                    accessibilityRole="button"
+                    accessibilityLabel={t('signIn.navFaq')}
+                    onPress={scrollToFaq}
+                    style={({ pressed }) => [styles.topNavPill, pressed && { opacity: 0.7 }]}>
+                    <Ionicons name="help-circle-outline" size={13} color={colors.text} />
+                    <Text style={styles.topNavPillText}>{t('signIn.navFaq')}</Text>
+                  </Pressable>
+                </View>
+                <View style={styles.langSwitch} accessibilityRole="radiogroup" accessibilityLabel={t('signIn.language')}>
+                  {(['en', 'bn'] as const).map((l) => (
+                    <Pressable
+                      key={l}
+                      testID={`signin-lang-${l}`}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: locale === l }}
+                      onPress={() => setLanguage(l)}
+                      style={[styles.langOption, locale === l && styles.langOptionOn]}>
+                      <Text style={[styles.langText, locale === l && styles.langTextOn]}>
+                        {t(l === 'en' ? 'settings.english' : 'settings.bangla')}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
             </View>
 
@@ -151,7 +185,27 @@ export default function SignIn() {
                 {t('signIn.headlineA')} <Text style={[styles.headline, headlineSize, styles.soft]}>{t('signIn.headlineB')}</Text>
               </Text>
               <Text style={[styles.pitch, medium && styles.pitchWide]}>{t('signIn.pitch')}</Text>
-              <DemoButton label={t('signIn.demo')} testID="demo-button" />
+              <View style={styles.heroNavRow}>
+                <DemoButton label={t('signIn.demo')} testID="demo-button" />
+                <Pressable
+                  testID="hero-about-button"
+                  accessibilityRole="button"
+                  accessibilityLabel={t('signIn.navAbout')}
+                  onPress={scrollToAbout}
+                  style={({ pressed }) => [styles.heroNavButton, pressed && { opacity: 0.8 }]}>
+                  <Ionicons name="information-circle-outline" size={14} color={colors.text} />
+                  <Text style={styles.heroNavText}>{t('signIn.navAbout')}</Text>
+                </Pressable>
+                <Pressable
+                  testID="hero-faq-button"
+                  accessibilityRole="button"
+                  accessibilityLabel={t('signIn.navFaq')}
+                  onPress={scrollToFaq}
+                  style={({ pressed }) => [styles.heroNavButton, pressed && { opacity: 0.8 }]}>
+                  <Ionicons name="help-circle-outline" size={14} color={colors.text} />
+                  <Text style={styles.heroNavText}>{t('signIn.navFaq')}</Text>
+                </Pressable>
+              </View>
 
               <View style={styles.form}>
                 <View style={styles.formHead}>
@@ -217,7 +271,7 @@ export default function SignIn() {
           </Band>
 
           {/* What the wallet does, as a strip like a row of logos. */}
-          <Band color={tone.white} z={4} style={styles.stripBand}>
+          <Band color={tone.white} z={6} style={styles.stripBand}>
             <View style={[styles.strip, !medium && styles.stripNarrow]}>
               {STRIP.map((s) => (
                 <View key={s.key} style={[styles.stripItem, !medium && styles.stripItemNarrow]}>
@@ -229,7 +283,7 @@ export default function SignIn() {
           </Band>
 
           {/* Features. */}
-          <Band color={tone.grey} z={3} style={styles.section}>
+          <Band color={tone.grey} z={5} style={styles.section}>
             <Text style={[styles.sectionTitle, medium && styles.sectionTitleWide]}>
               {t('signIn.sectionA')} <Text style={[styles.sectionTitle, medium && styles.sectionTitleWide, styles.soft]}>
                 {t('signIn.sectionB')}
@@ -254,7 +308,7 @@ export default function SignIn() {
           </Band>
 
           {/* How disguised cash-outs are caught (pay function + ML risk score). */}
-          <Band color={tone.ink} z={2} style={styles.section}>
+          <Band color={tone.ink} z={4} style={styles.section}>
             <View style={styles.guardPill}>
               <Ionicons name="shield-checkmark" size={13} color={colors.text} />
               <Text style={styles.rulePillText}>{t('signIn.guard.label')}</Text>
@@ -313,6 +367,16 @@ export default function SignIn() {
                 ))}
               </View>
             </View>
+          </Band>
+
+          {/* About section. */}
+          <Band color={tone.white} z={3} style={styles.section} onLayout={(e) => setAboutY(e.nativeEvent.layout.y)}>
+            <AboutSection variant="landing" />
+          </Band>
+
+          {/* Frequently Asked Questions. */}
+          <Band color={tone.grey} z={2} style={styles.section} onLayout={(e) => setFaqY(e.nativeEvent.layout.y)}>
+            <FaqSection variant="landing" />
           </Band>
 
           {/* Closing call to action. */}
@@ -376,19 +440,22 @@ function DemoButton({ label, testID, light }: { label: string; testID: string; l
 }
 
 /** A rounded section; every band after the first slides up under the previous one. */
-function Band({ color, z, first, style, children }: {
+function Band({ color, z, first, style, onLayout, children }: {
   color: string;
   z: number;
   first?: boolean;
   style?: ViewStyle | (ViewStyle | false | null)[];
+  onLayout?: (e: LayoutChangeEvent) => void;
   children: ReactNode;
 }) {
   return (
-    <View style={[
-      { backgroundColor: color, zIndex: z, borderRadius: RADIUS },
-      !first && { marginTop: -RADIUS, paddingTop: RADIUS, borderTopLeftRadius: 0, borderTopRightRadius: 0 },
-      StyleSheet.flatten(style),
-    ]}>
+    <View
+      onLayout={onLayout}
+      style={[
+        { backgroundColor: color, zIndex: z, borderRadius: RADIUS },
+        !first && { marginTop: -RADIUS, paddingTop: RADIUS, borderTopLeftRadius: 0, borderTopRightRadius: 0 },
+        StyleSheet.flatten(style),
+      ]}>
       {children}
     </View>
   );
@@ -427,6 +494,18 @@ const styles = StyleSheet.create({
   logoSmall: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   logoSmallText: { color: colors.primaryText, fontSize: 14, fontWeight: '900' },
   brandName: { marginRight: 8, fontSize: 11, fontWeight: '700', letterSpacing: 1, color: colors.text, flexShrink: 1 },
+  topNavRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  topNavPills: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  topNavPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: tone.white,
+  },
+  topNavPillText: { fontSize: 12, fontWeight: '700', color: colors.text },
   langSwitch: { flexDirection: 'row', backgroundColor: tone.white, borderRadius: 999, padding: 3 },
   langOption: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   langOptionOn: { backgroundColor: colors.primary },
@@ -462,6 +541,24 @@ const styles = StyleSheet.create({
   pitch: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', maxWidth: 520 },
   pitchWide: { fontSize: 17, lineHeight: 26 },
 
+  heroNavRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  heroNavButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    backgroundColor: tone.white,
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)',
+  },
+  heroNavText: { fontSize: 13, fontWeight: '700', color: colors.text },
   demoButton: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,39 +1,25 @@
 # Shongrokhon: Unified MFS & AI Financial Coach
 
-A mobile financial services (MFS) wallet with built-in fraud scoring and an AI financial coach, delivered as a **web app** with a mobile-first layout.
-
-**Live app:** [shongrokhon.vercel.app](https://shongrokhon.vercel.app)
-
-The hosted project has no seeded test users. To try the app with the test personas below, run it locally (see [Setup](#setup)).
+## Project overview
+**Problem addressed:** Traditional Mobile Financial Services (MFS) lack personalized financial guidance and real-time, context-aware fraud prevention, leaving users vulnerable to scams and poor financial management.
+**Proposed solution:** Shongrokhon is a unified MFS wallet that integrates machine learning for real-time risk scoring and a generative AI coach for personalized financial insights.
+**Purpose of the project:** To deliver a secure, intelligent, and user-friendly mobile-first web app that empowers users with seamless payments, proactive fraud protection, and AI-driven financial coaching.
 
 ## Features
+- **Foundation & Core MFS:** Phone/email sign-in with OTP lockout, double-entry ledger, Bangla QR (EMVCo) scanning in the browser, payments, cash-out at agents, send money, and bill pay.
+- **Risk Intelligence (AI Component):** Real-time ML risk scoring in every payment (scan → score → pay or flag) using an ML service (XGBoost, Isolation Forest) to detect fraud rings and anomalies, supported by SQL fallback rules.
+- **AI Financial Coach (AI Component):** A Smart Spending Companion that provides personalized spending dashboards, savings planners, and cash-flow forecasts using Claude (via the `coach` Edge Function).
+- **AI Investigation Assistant:** An admin app feature that uses AI to summarize flagged transactions and fraud rings for analysts.
+- **Localization:** Full English and Bangla UI support.
 
-| Phase | What it adds | Results | How to test |
-| ----- | ------------ | ------- | ----------- |
-| 1. Foundation & core MFS | Phone/email sign-in with OTP lockout, double-entry ledger, Bangla QR (EMVCo) scanning in the browser, payments | [Matrix](docs/phase1-test-matrix.md) | — |
-| 2. Risk intelligence | ML risk scoring in every payment (scan → score → pay or flag), SQL fallback rules, fraud-ring detection | [Matrix](docs/phase2-test-matrix.md) | [Guide](docs/phase2-testing.md) |
-| 3. AI coach | Spending dashboard with Claude insights (via the `coach` Edge Function), savings planner, cash-flow forecast | [Matrix](docs/phase3-test-matrix.md) | [Guide](docs/phase3-testing.md) |
-| 4. Active interventions | Cash-out at agents, send money, bill pay, Smart Spending Companion, AI Investigation Assistant (admin app), Bangla UI and coach, analytics, account deletion | [Matrix](docs/phase4-test-matrix.md) | [Guide](docs/phase4-testing.md) |
-
-## Documentation
-
-- [Product requirements (PRD)](unified_mfs_ai_financial_coach_prd.md)
-- [Test plan](testcase.md), with test IDs like `TC-P1-PAY-01`
-- [Security review](docs/security-review.md)
-- [Deploying to hosted Supabase and Vercel](docs/deploy-hosted.md)
-- [CLAUDE.md](CLAUDE.md): architecture, backend rules and testing notes for contributors
-
-## Stack
-
-- **App** (`src/`): Expo SDK 57 for web (react-native-web, expo-router, SPA output), TypeScript.
-  - **QR scanning:** browser camera via `expo-camera` (native `BarcodeDetector`, with a zxing-wasm fallback for Safari and Firefox), or image upload. The camera needs HTTPS or `localhost`.
-  - **Languages:** English and Bangla (`src/i18n/`).
-- **Admin app** (`admin/`): the AI Investigation Assistant for analysts. Vite + React, with its own `package.json`.
-- **Backend** (`supabase/`): Supabase (Postgres, Auth, Edge Functions).
-  - **Money movement** happens only inside `SECURITY DEFINER` functions (`make_payment`, `make_cashout`, `make_transfer`, and the service-role-only admin functions). Clients get read-only, row-level-secured access.
-  - **Ledger:** double-entry `ledger_entries`, append-only. Balances can never go negative.
-  - **Edge Functions:** `otp` (attempt counting, lockout, expiry), `pay` (risk scoring before payment), `coach` (LLM insights) and `investigate` (analyst summaries).
-- **ML service** (`ml/`): Python, FastAPI, XGBoost, Isolation Forest and networkx. Runs in Docker.
+## Technology stack
+- **Frontend App:** Expo SDK 57 for web (react-native-web, expo-router, SPA output), TypeScript.
+- **Admin App:** Vite + React.
+- **Backend Services:** Supabase (Postgres, Auth, Edge Functions).
+- **AI Models & ML:** 
+  - Generative AI: Anthropic Claude API (for the AI financial coach and analyst summaries).
+  - Machine Learning: Python, FastAPI, XGBoost, Isolation Forest, and networkx (running in Docker).
+- **Libraries/APIs:** `expo-camera` (BarcodeDetector, zxing-wasm fallback).
 
 ## AI / ML at a glance
 
@@ -51,54 +37,111 @@ Full write-ups: the [risk model card](docs/ml-model-card.md) (data, features, ca
 
 Everything above is trained and measured on synthetic data; the model card says what that does and does not prove.
 
-## Setup
+## Requirements
+- Node.js and npm
+- Supabase CLI
+- Docker (for the ML service)
+- Anthropic API Key (for the Claude AI Coach)
 
+## Installation and setup
+1. Clone the repository and navigate to the project directory.
+2. Install frontend dependencies:
+   ```bash
+   npm install
+   ```
+3. Install admin app dependencies:
+   ```bash
+   npm --prefix admin install
+   ```
+4. Start the local Supabase stack (requires Docker):
+   ```bash
+   supabase start -x studio,postgres-meta,imgproxy,logflare,vector,supavisor,mailpit,realtime,storage-api
+   ```
+5. Set up environment variables (see the Environment variables section below).
+6. Start the ML scoring service container:
+   ```bash
+   npm run ml:up
+   ```
+
+## Environment variables
+Create the required `.env` files using the provided examples.
+
+**Root `.env` (Client-side):**
 ```bash
-npm install
-supabase start -x studio,postgres-meta,imgproxy,logflare,vector,supavisor,mailpit,realtime,storage-api
-cp .env.example .env                              # fill API_URL / ANON_KEY from `supabase status -o env`
-cp supabase/functions/.env.example supabase/functions/.env   # ML token, ANTHROPIC_API_KEY, COACH_MODEL
-npm run ml:up                                     # ML scoring service (after the Supabase stack is up)
-npm start                                         # dev server -> http://localhost:8081
-npm run build                                     # production build -> dist/ (static SPA)
+cp .env.example .env
+```
+Populate `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_ANON_KEY` using the output from `supabase status -o env`.
+
+**Supabase Functions `.env` (Backend Secrets):**
+```bash
+cp supabase/functions/.env.example supabase/functions/.env
+```
+Required variables:
+- `ML_SERVICE_TOKEN`: A secret token to authenticate requests to the ML service.
+- `ANTHROPIC_API_KEY`: Your Anthropic API key for the Claude AI coach.
+- `COACH_MODEL`: The AI model version to use.
+
+**Supabase Local `.env` (Auth):**
+- In `supabase/.env`, define `SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN`. Any placeholder value works locally because test numbers do not reach Twilio.
+
+## Run and build commands
+**Development Server (Main App):**
+```bash
+npm start
+```
+This runs the Expo dev server at `http://localhost:8081`.
+
+**Development Server (Admin App):**
+```bash
+npm --prefix admin run dev
+```
+This runs the Vite dev server at `http://localhost:8766`.
+
+**Production Build (Main App):**
+```bash
+npm run build
+```
+Builds the static SPA output to the `dist/` folder.
+
+**Stop Services:**
+```bash
+npm run ml:down
+supabase stop
 ```
 
-- `supabase/.env` must define `SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN`. Any value works locally, because test numbers never reach Twilio.
-- Admin app: `npm --prefix admin install`, then `npm --prefix admin run dev` (http://localhost:8766).
-- Stop the ML container (`npm run ml:down`) before `supabase stop`.
+## Live deployment URL
+**Live app:** [shongrokhon.vercel.app](https://shongrokhon.vercel.app)
 
-## Test accounts (local only)
+*Note: The hosted project has no seeded test users. To try the app with the test personas, run it locally.*
 
-Seeded by `supabase/seed.sql` and `supabase/seed_history.sql`. Every test number uses OTP `123456` and PIN `12345`.
-
-| Persona | Phone | Balance |
-| ------- | ----- | ------- |
-| U-NORMAL (six months of history) | 01711000001 | ৳5,000 |
-| U-LOW | 01711000002 | ৳100 |
-| M-LEGIT (merchant `MLEGIT0001`, "Rahim Store") | 01811000001 | ৳0 |
-| U-ABUSER | 01911000001 | ৳20,000 |
-| U-CASHHEAVY (cashes out at agents) | 01611000001 | ৳3,000 |
-| Unregistered, for sign-up tests | 01711000003 … 01711000009 | — |
-
-Analyst (admin app): `analyst@shongrokhon.test` / `analyst-pass-123`.
-
-The full persona list (ring members, pseudo-merchants, agents, billers) is in [CLAUDE.md](CLAUDE.md) and the phase testing guides. QR fixtures (PNG + payloads) come from `npm run qr:fixtures` and are written to `fixtures/qr/`.
-
-## Tests
-
-| Command | What |
-| ------- | ---- |
+## Testing instructions
+| Command | What it tests |
+| ------- | ------------- |
 | `npm run lint && npm run typecheck` | Static checks |
-| `npm test` | Unit and component tests (Jest, RNTL), plus the hard-coded-text check |
-| `npm run test:db` | pgTAP schema, RLS and payment tests, plus the migration idempotency check |
-| `npm run test:integration` | Resets the local DB, then tests the Edge Functions, PostgREST and RLS over HTTP |
-| `npm run test:e2e` | Playwright: resets the DB, builds and serves the web app, runs browser flows |
+| `npm test` | Unit and component tests (Jest, RNTL), plus hard-coded-text checks |
+| `npm run test:db` | pgTAP schema, RLS, payment tests, and migration idempotency |
+| `npm run test:integration` | Edge Functions, PostgREST, and RLS over HTTP |
+| `npm run test:e2e` | Playwright browser flows |
 | `npm run ml:test` | ML service tests (pytest, in Docker) |
 | `npm --prefix admin test` | Admin app tests (Vitest) |
-| `npm run check:secrets` | Fails if a server key or the ML token is in a web bundle |
+| `npm run check:secrets` | Ensures no server keys/ML tokens are in web bundles |
 
-Integration and E2E tests reset the database and need the ML container. Run them one after the other, never in parallel.
+*Note: Integration and E2E tests reset the database and require the ML container. Run them sequentially, never in parallel.*
 
-## Deployment
+## Other configuration
+**Test Accounts (Local Only):**
+Seeded automatically via `supabase/seed.sql` and `supabase/seed_history.sql`. All test numbers use OTP `123456` and PIN `12345`.
+- **U-NORMAL:** `01711000001` (Balance: ৳5,000)
+- **U-LOW:** `01711000002` (Balance: ৳100)
+- **M-LEGIT (Merchant):** `01811000001` (Balance: ৳0)
+- **U-ABUSER:** `01911000001` (Balance: ৳20,000)
+- **U-CASHHEAVY:** `01611000001` (Balance: ৳3,000)
+- **Unregistered (for sign-up):** `01711000003` to `01711000009`
+- **Analyst (Admin App):** `analyst@shongrokhon.test` / `analyst-pass-123`
 
-The web app is hosted on Vercel at [shongrokhon.vercel.app](https://shongrokhon.vercel.app). `vercel.json` holds the build and the security headers. The backend runs on a hosted Supabase project. See [docs/deploy-hosted.md](docs/deploy-hosted.md) for the full steps.
+**Additional Documents:**
+- [Product requirements (PRD)](unified_mfs_ai_financial_coach_prd.md)
+- [Test plan](testcase.md)
+- [Security review](docs/security-review.md)
+- [Deploying to hosted Supabase and Vercel](docs/deploy-hosted.md)
+- [CLAUDE.md](CLAUDE.md)

@@ -129,42 +129,20 @@ export default function SignIn() {
                 </View>
                 <Text style={styles.brandName} numberOfLines={1}>{t('signIn.brandBadge')}</Text>
               </View>
-              <View style={styles.topNavRight}>
-                <View style={styles.topNavPills}>
+              <View style={styles.langSwitch} accessibilityRole="radiogroup" accessibilityLabel={t('signIn.language')}>
+                {(['en', 'bn'] as const).map((l) => (
                   <Pressable
-                    testID="top-nav-about"
-                    accessibilityRole="button"
-                    accessibilityLabel={t('signIn.navAbout')}
-                    onPress={scrollToAbout}
-                    style={({ pressed }) => [styles.topNavPill, pressed && { opacity: 0.7 }]}>
-                    <Ionicons name="information-circle-outline" size={13} color={colors.text} />
-                    <Text style={styles.topNavPillText}>{t('signIn.navAbout')}</Text>
+                    key={l}
+                    testID={`signin-lang-${l}`}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: locale === l }}
+                    onPress={() => setLanguage(l)}
+                    style={[styles.langOption, locale === l && styles.langOptionOn]}>
+                    <Text style={[styles.langText, locale === l && styles.langTextOn]}>
+                      {t(l === 'en' ? 'settings.english' : 'settings.bangla')}
+                    </Text>
                   </Pressable>
-                  <Pressable
-                    testID="top-nav-faq"
-                    accessibilityRole="button"
-                    accessibilityLabel={t('signIn.navFaq')}
-                    onPress={scrollToFaq}
-                    style={({ pressed }) => [styles.topNavPill, pressed && { opacity: 0.7 }]}>
-                    <Ionicons name="help-circle-outline" size={13} color={colors.text} />
-                    <Text style={styles.topNavPillText}>{t('signIn.navFaq')}</Text>
-                  </Pressable>
-                </View>
-                <View style={styles.langSwitch} accessibilityRole="radiogroup" accessibilityLabel={t('signIn.language')}>
-                  {(['en', 'bn'] as const).map((l) => (
-                    <Pressable
-                      key={l}
-                      testID={`signin-lang-${l}`}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: locale === l }}
-                      onPress={() => setLanguage(l)}
-                      style={[styles.langOption, locale === l && styles.langOptionOn]}>
-                      <Text style={[styles.langText, locale === l && styles.langTextOn]}>
-                        {t(l === 'en' ? 'settings.english' : 'settings.bangla')}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                ))}
               </View>
             </View>
 
@@ -494,18 +472,6 @@ const styles = StyleSheet.create({
   logoSmall: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   logoSmallText: { color: colors.primaryText, fontSize: 14, fontWeight: '900' },
   brandName: { marginRight: 8, fontSize: 11, fontWeight: '700', letterSpacing: 1, color: colors.text, flexShrink: 1 },
-  topNavRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  topNavPills: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  topNavPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: tone.white,
-  },
-  topNavPillText: { fontSize: 12, fontWeight: '700', color: colors.text },
   langSwitch: { flexDirection: 'row', backgroundColor: tone.white, borderRadius: 999, padding: 3 },
   langOption: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   langOptionOn: { backgroundColor: colors.primary },
